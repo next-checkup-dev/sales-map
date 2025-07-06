@@ -171,30 +171,7 @@ export default function Home() {
             </Typography>
           </Card>
         </Grid>
-        <Grid item xs={6}>
-          <Card sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="h6" color="primary">
-              {sheetsLoading ? <CircularProgress size={20} /> : 
-                `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M`}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              총 매출
-            </Typography>
-          </Card>
-        </Grid>
-        <Grid item xs={6}>
-          <Card sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="h6" color="secondary">
-              {sheetsLoading ? <CircularProgress size={20} /> : 
-                salesPeople.length > 0 ? 
-                  `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / salesPeople.length / 1000000)}M` : 
-                  '0M'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              평균 매출
-            </Typography>
-          </Card>
-        </Grid>
+
       </Grid>
 
       {/* 최근 활동 */}
@@ -329,9 +306,6 @@ export default function Home() {
                       <Typography variant="body2" color="text.secondary">
                         {person.phone}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        매출: {person.sales.toLocaleString()}원
-                      </Typography>
                     </Box>
                   }
                 />
@@ -387,22 +361,7 @@ export default function Home() {
         </CardContent>
       </Card>
 
-      <Card sx={{ m: 2 }}>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            매출 현황
-          </Typography>
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="h3" color="primary">
-              {sheetsLoading ? <CircularProgress size={48} /> : 
-                `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M`}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              총 매출
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
+
     </Box>
   )
 

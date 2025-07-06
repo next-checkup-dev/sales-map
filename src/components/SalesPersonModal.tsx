@@ -40,7 +40,6 @@ export default function SalesPersonModal({
     position: '',
     status: '활성' as '활성' | '비활성',
     location: '',
-    sales: 0,
     phone: '',
     latitude: '',
     longitude: '',
@@ -57,7 +56,6 @@ export default function SalesPersonModal({
         position: salesPerson.position || '',
         status: salesPerson.status || '활성',
         location: salesPerson.location || '',
-        sales: salesPerson.sales || 0,
         phone: salesPerson.phone || '',
         latitude: salesPerson.latitude?.toString() || '',
         longitude: salesPerson.longitude?.toString() || '',
@@ -69,7 +67,6 @@ export default function SalesPersonModal({
         position: '',
         status: '활성',
         location: '',
-        sales: 0,
         phone: '',
         latitude: '',
         longitude: '',
@@ -93,7 +90,6 @@ export default function SalesPersonModal({
         position: formData.position,
         status: formData.status,
         location: formData.location,
-        sales: formData.sales,
         phone: formData.phone,
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
         longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
@@ -119,7 +115,6 @@ export default function SalesPersonModal({
       position: '',
       status: '활성',
       location: '',
-      sales: 0,
       phone: '',
       latitude: '',
       longitude: '',
@@ -192,15 +187,7 @@ export default function SalesPersonModal({
             disabled={loading}
           />
 
-          <TextField
-            fullWidth
-            label="매출"
-            type="number"
-            value={formData.sales}
-            onChange={(e) => setFormData({ ...formData, sales: parseInt(e.target.value) || 0 })}
-            margin="normal"
-            disabled={loading}
-          />
+
 
           <TextField
             fullWidth

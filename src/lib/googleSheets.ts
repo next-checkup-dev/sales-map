@@ -22,7 +22,6 @@ export interface SalesPersonData {
   position: string
   status: '활성' | '비활성'
   location: string
-  sales: number
   lastUpdate: string
   phone: string
   latitude?: number
@@ -49,11 +48,10 @@ export async function readSalesPeopleData(): Promise<SalesPersonData[]> {
       position: row[3] || '',
       status: (row[4] as '활성' | '비활성') || '활성',
       location: row[5] || '',
-      sales: parseInt(row[6]) || 0,
-      lastUpdate: row[7] || new Date().toISOString().split('T')[0],
-      phone: row[8] || '',
-      latitude: parseFloat(row[9]) || undefined,
-      longitude: parseFloat(row[10]) || undefined,
+      lastUpdate: row[6] || new Date().toISOString().split('T')[0],
+      phone: row[7] || '',
+      latitude: parseFloat(row[8]) || undefined,
+      longitude: parseFloat(row[9]) || undefined,
     }))
   } catch (error) {
     console.error('Google Sheets 데이터 읽기 오류:', error)
@@ -74,7 +72,6 @@ export async function writeSalesPersonData(data: SalesPersonData): Promise<boole
         data.position,
         data.status,
         data.location,
-        data.sales,
         data.lastUpdate,
         data.phone,
         data.latitude || '',
@@ -84,7 +81,7 @@ export async function writeSalesPersonData(data: SalesPersonData): Promise<boole
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'A:J',
+      range: 'A:I',
       valueInputOption: 'RAW',
       requestBody: {
         values,
@@ -125,7 +122,6 @@ export async function updateSalesPersonData(data: SalesPersonData): Promise<bool
         data.position,
         data.status,
         data.location,
-        data.sales,
         data.lastUpdate,
         data.phone,
         data.latitude || '',
@@ -135,7 +131,7 @@ export async function updateSalesPersonData(data: SalesPersonData): Promise<bool
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `A${rowIndex + 1}:J${rowIndex + 1}`,
+      range: `A${rowIndex + 1}:I${rowIndex + 1}`,
       valueInputOption: 'RAW',
       requestBody: {
         values,
