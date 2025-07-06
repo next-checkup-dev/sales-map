@@ -37,6 +37,25 @@ interface ConnectionTestResult {
     sampleData: SalesPersonData[]
     connectionStatus: string
     timestamp: string
+    validation: {
+      hasData: boolean
+      validRecords: number
+      invalidRecords: number
+      missingFields: string[]
+      dataQuality: {
+        hasName: number
+        hasEmail: number
+        hasPosition: number
+        hasLocation: number
+        hasPhone: number
+        hasCoordinates: number
+      }
+    }
+    dataSummary: {
+      totalFields: number
+      filledFields: number
+      completionRate: number
+    }
   }
   details?: {
     message: string
@@ -130,35 +149,123 @@ export default function ConnectionTestModal({
 
               {result.success && result.data && (
                 <Box>
-                  {/* 연결 상태 */}
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      연결 상태
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Chip
-                        label={`상태: ${result.data.connectionStatus}`}
-                        color="success"
-                        icon={<CheckCircleIcon />}
-                      />
-                      <Chip
-                        label={`응답시간: ${result.data.responseTime}`}
-                        color="primary"
-                        icon={<ScheduleIcon />}
-                      />
-                      <Chip
-                        label={`총 레코드: ${result.data.totalRecords}개`}
-                        color="info"
-                        icon={<StorageIcon />}
-                      />
-                    </Box>
-                  </Box>
+                                     {/* 연결 상태 */}
+                   <Box sx={{ mb: 3 }}>
+                     <Typography variant="h6" sx={{ mb: 2 }}>
+                       연결 상태
+                     </Typography>
+                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                       <Chip
+                         label={`상태: ${result.data.connectionStatus}`}
+                         color="success"
+                         icon={<CheckCircleIcon />}
+                       />
+                       <Chip
+                         label={`응답시간: ${result.data.responseTime}`}
+                         color="primary"
+                         icon={<ScheduleIcon />}
+                       />
+                       <Chip
+                         label={`총 레코드: ${result.data.totalRecords}개`}
+                         color="info"
+                         icon={<StorageIcon />}
+                       />
+                     </Box>
+                   </Box>
 
-                                                        {/* 샘플 데이터 */}
+                   {/* 데이터 검증 결과 */}
+                   <Box sx={{ mb: 3 }}>
+                     <Typography variant="h6" sx={{ mb: 2 }}>
+                       데이터 검증 결과
+                     </Typography>
+                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                       <Chip
+                         label={`유효 레코드: ${result.data.validation.validRecords}개`}
+                         color={result.data.validation.validRecords > 0 ? 'success' : 'error'}
+                       />
+                       <Chip
+                         label={`무효 레코드: ${result.data.validation.invalidRecords}개`}
+                         color={result.data.validation.invalidRecords > 0 ? 'error' : 'default'}
+                       />
+                       <Chip
+                         label={`완성도: ${result.data.dataSummary.completionRate}%`}
+                         color={result.data.dataSummary.completionRate >= 80 ? 'success' : 
+                               result.data.dataSummary.completionRate >= 50 ? 'warning' : 'error'}
+                       />
+                     </Box>
+                     
+                     {/* 데이터 품질 상세 */}
+                     <Box sx={{ mb: 2 }}>
+                       <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                         필드별 완성도:
+                       </Typography>
+                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">이름</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasName}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasName === result.data.totalRecords ? 'success' : 'warning'}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">이메일</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasEmail}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasEmail === result.data.totalRecords ? 'success' : 'warning'}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">직책</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasPosition}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasPosition === result.data.totalRecords ? 'success' : 'warning'}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">위치</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasLocation}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasLocation === result.data.totalRecords ? 'success' : 'warning'}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">전화번호</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasPhone}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasPhone === result.data.totalRecords ? 'success' : 'warning'}
+                           />
+                         </Box>
+                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                           <Typography variant="body2">좌표</Typography>
+                           <Chip 
+                             label={`${result.data.validation.dataQuality.hasCoordinates}/${result.data.totalRecords}`}
+                             size="small"
+                             color={result.data.validation.dataQuality.hasCoordinates === result.data.totalRecords ? 'success' : 'info'}
+                           />
+                         </Box>
+                       </Box>
+                     </Box>
+
+                     {/* 누락된 필드 */}
+                     {result.data.validation.missingFields.length > 0 && (
+                       <Alert severity="warning" sx={{ mt: 2 }}>
+                         <Typography variant="body2">
+                           누락된 필드: {result.data.validation.missingFields.join(', ')}
+                         </Typography>
+                       </Alert>
+                     )}
+                   </Box>
+
+                                                        {/* 실제 데이터 샘플 */}
                    {result.data?.sampleData && result.data.sampleData.length > 0 && (
                      <Box>
                        <Typography variant="h6" sx={{ mb: 2 }}>
-                         샘플 데이터 ({result.data?.sampleData.length}개)
+                         실제 Google Sheets 데이터 ({result.data?.sampleData.length}개)
                        </Typography>
                       <List>
                                                  {result.data?.sampleData?.map((person, index) => (
