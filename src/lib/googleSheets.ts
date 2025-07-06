@@ -238,17 +238,53 @@ export async function updateHospitalSalesData(data: HospitalSalesData): Promise<
       lastUpdate: new Date().toISOString().split('T')[0]
     }
     
-    // 먼저 해당 ID의 행을 찾기
+    // 먼저 헤더 정보 가져오기
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'A1:Z1',
+    })
+    const headers = headerResponse.data.values?.[0] || []
+    
+    // 헤더 기반으로 컬럼 인덱스 찾기
+    const columnMap = {
+      id: findColumnIndex(headers, ['id', '번호', '순번']) !== -1 ? findColumnIndex(headers, ['id', '번호', '순번']) : 0,
+      hospitalName: findColumnIndex(headers, ['의원명', '병원명', 'hospital', 'name']) !== -1 ? findColumnIndex(headers, ['의원명', '병원명', 'hospital', 'name']) : 2,
+      phone: findColumnIndex(headers, ['전화번호', '연락처', 'phone', 'tel']) !== -1 ? findColumnIndex(headers, ['전화번호', '연락처', 'phone', 'tel']) : 5,
+    }
+    
+    // 전체 데이터 읽기 (헤더 제외)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'A:A',
+      range: 'A2:Z',
     })
 
     const rows = response.data.values || []
-    const rowIndex = rows.findIndex(row => row[0] === data.id)
+    
+    // 병원명과 전화번호로 행 찾기 (더 안정적인 매칭)
+    let rowIndex = -1
+    
+    // 1. ID로 먼저 찾기
+    rowIndex = rows.findIndex(row => row[columnMap.id] === data.id)
+    
+    // 2. ID로 못 찾으면 병원명과 전화번호로 찾기
+    if (rowIndex === -1) {
+      rowIndex = rows.findIndex(row => 
+        row[columnMap.hospitalName] === data.hospitalName && 
+        row[columnMap.phone] === data.phone
+      )
+    }
+    
+    // 3. 그래도 못 찾으면 병원명만으로 찾기
+    if (rowIndex === -1) {
+      rowIndex = rows.findIndex(row => row[columnMap.hospitalName] === data.hospitalName)
+    }
     
     if (rowIndex === -1) {
-      console.error('해당 ID의 데이터를 찾을 수 없습니다:', data.id)
+      console.error('해당 병원 데이터를 찾을 수 없습니다:', {
+        id: data.id,
+        hospitalName: data.hospitalName,
+        phone: data.phone
+      })
       return false
     }
 
@@ -287,7 +323,7 @@ export async function updateHospitalSalesData(data: HospitalSalesData): Promise<
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `A${rowIndex + 1}:AB${rowIndex + 1}`,
+      range: `A${rowIndex + 2}:AB${rowIndex + 2}`, // 헤더 제외하므로 +2
       valueInputOption: 'RAW',
       requestBody: {
         values,
@@ -306,14 +342,26 @@ export async function deleteSalesPersonData(id: string): Promise<boolean> {
   try {
     const sheets = getGoogleSheetsClient()
     
-    // 먼저 해당 ID의 행을 찾기
+    // 먼저 헤더 정보 가져오기
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'A1:Z1',
+    })
+    const headers = headerResponse.data.values?.[0] || []
+    
+    // 헤더 기반으로 컬럼 인덱스 찾기
+    const columnMap = {
+      id: findColumnIndex(headers, ['id', '번호', '순번']) !== -1 ? findColumnIndex(headers, ['id', '번호', '순번']) : 0,
+    }
+    
+    // 전체 데이터 읽기 (헤더 제외)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'A:A',
+      range: 'A2:Z',
     })
 
     const rows = response.data.values || []
-    const rowIndex = rows.findIndex(row => row[0] === id)
+    const rowIndex = rows.findIndex(row => row[columnMap.id] === id)
     
     if (rowIndex === -1) {
       console.error('해당 ID의 데이터를 찾을 수 없습니다:', id)
@@ -330,8 +378,8 @@ export async function deleteSalesPersonData(id: string): Promise<boolean> {
               range: {
                 sheetId: 0, // 첫 번째 시트
                 dimension: 'ROWS',
-                startIndex: rowIndex,
-                endIndex: rowIndex + 1,
+                startIndex: rowIndex + 1, // 헤더 제외하므로 +1
+                endIndex: rowIndex + 2,
               },
             },
           },
