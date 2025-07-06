@@ -13,7 +13,7 @@ import {
   SelectChangeEvent,
 } from '@mui/material'
 import type { HospitalSalesData } from '@/lib/googleSheets'
-import { convertToMapMarkers, getSalesStageColor, DEFAULT_MAP_CONFIG } from '@/lib/kakaoMap'
+import { convertToMapMarkers, getDepartmentColor, DEFAULT_MAP_CONFIG } from '@/lib/kakaoMap'
 
 declare global {
   interface Window {
@@ -199,7 +199,7 @@ export default function KakaoMap({
         markerData.position.lng
       )
       const markerImage = new window.kakao.maps.MarkerImage(
-        createMarkerImage(getSalesStageColor(markerData.salesStage)),
+        createMarkerImage(getDepartmentColor(markerData.department)),
         new window.kakao.maps.Size(30, 30)
       )
       const marker = new window.kakao.maps.Marker({
@@ -397,27 +397,26 @@ export default function KakaoMap({
         boxShadow: 2
       }}>
         <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 1, display: 'block' }}>
-          세일즈 단계
+          진료과
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {['S', 'A', 'B', 'C'].map(stage => (
-            <Box key={stage} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  borderRadius: '50%',
-                  bgcolor: getSalesStageColor(stage),
-                  border: '1px solid #ccc'
-                }}
-              />
-              <Typography variant="caption">
-                {stage === 'S' ? 'S (최우선)' : 
-                 stage === 'A' ? 'A (우선)' : 
-                 stage === 'B' ? 'B (일반)' : 'C (보류)'}
-              </Typography>
-            </Box>
-          ))}
+          {Array.from(new Set(hospitals.map(h => h.department)))
+            .filter(dep => dep && dep.trim() !== '')
+            .slice(0, 10) // 최대 10개만 표시
+            .map(dep => (
+              <Box key={dep} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: '50%',
+                    bgcolor: getDepartmentColor(dep),
+                    border: '1px solid #ccc'
+                  }}
+                />
+                <Typography variant="caption">{dep}</Typography>
+              </Box>
+            ))}
         </Box>
       </Box>
     </Box>

@@ -31,6 +31,7 @@ export interface MapMarker {
   content: string
   visitCount: number
   salesStage: string
+  department: string
 }
 
 // 카카오맵 API 키 (환경변수에서 가져오기)
@@ -88,7 +89,8 @@ export function convertToMapMarkers(hospitals: HospitalSalesData[]): MapMarker[]
       title: hospital.hospitalName || '병원명 없음',
       content: createInfoWindowContent(hospital),
       visitCount: hospital.visitCount || 0,
-      salesStage: hospital.salesStage || ''
+      salesStage: hospital.salesStage || '',
+      department: hospital.department || '',
     }))
 }
 
@@ -224,4 +226,33 @@ export function getSalesStageColor(stage: string): string {
   }
   
   return colorMap[stage] || '#CCCCCC'
+}
+
+// 진료과별 색상 매핑
+export function getDepartmentColor(department: string): string {
+  const colorMap: { [key: string]: string } = {
+    '내과': '#1976D2', // 파랑
+    '외과': '#D32F2F', // 빨강
+    '소아과': '#388E3C', // 초록
+    '정형외과': '#FBC02D', // 노랑
+    '이비인후과': '#7B1FA2', // 보라
+    '피부과': '#F57C00', // 주황
+    '안과': '#0288D1', // 하늘
+    '치과': '#C2185B', // 핑크
+    '산부인과': '#512DA8', // 진보라
+    '비뇨기과': '#0097A7', // 청록
+    '신경과': '#455A64', // 회색
+    '정신건강의학과': '#8D6E63', // 갈색
+    '재활의학과': '#43A047', // 연두
+    '가정의학과': '#6D4C41', // 진갈색
+    '마취통증의학과': '#F06292', // 연핑크
+    '영상의학과': '#00ACC1', // 밝은청록
+    '진단검사의학과': '#FFD600', // 밝은노랑
+    '기타': '#BDBDBD', // 기타
+  }
+  // 부분 일치 허용
+  for (const key of Object.keys(colorMap)) {
+    if (department.includes(key)) return colorMap[key]
+  }
+  return '#CCCCCC' // 기본색
 } 

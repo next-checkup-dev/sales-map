@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -413,35 +413,6 @@ export default function Home() {
     { label: '현황', icon: <ChartIcon />, content: renderAnalyticsTab },
     { label: '설정', icon: <SettingsIcon />, content: renderSettingsTab },
   ]
-
-  // 좌표 변환 및 Google Sheets 업데이트 자동화
-  useEffect(() => {
-    // lat/lng이 없는 병원만 선별
-    const hospitalsToGeocode = seoulHospitalSales.filter(h => !h.lat || !h.lng)
-    if (hospitalsToGeocode.length === 0) return
-
-    hospitalsToGeocode.forEach(async (hospital) => {
-      try {
-        // 1. 주소 → 좌표 변환
-        const res = await fetch(`/api/geocode?address=${encodeURIComponent(hospital.address)}`)
-        const result = await res.json()
-        if (result.success && result.data) {
-          const { lat, lng } = result.data
-          // 2. Google Sheets에 lat/lng 업데이트
-          await fetch('/api/salespeople', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...hospital, lat, lng })
-          })
-          // 3. 프론트 상태에도 즉시 반영 (fetchData로 새로고침)
-          fetchData(false)
-        }
-      } catch (e) {
-        // 실패 시 무시 (콘솔만)
-        console.error('좌표 변환/업데이트 실패:', hospital.hospitalName, e)
-      }
-    })
-  }, [seoulHospitalSales, fetchData])
 
   // 로딩 중일 때
   if (loading) {
