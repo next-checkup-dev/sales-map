@@ -238,47 +238,65 @@ def main():
     
     print(f"총 {len(existing_data)}행의 데이터를 처리합니다.")
     
-    # 위도, 경도 데이터 수집
-    coordinates_data = []
+    # 50행씩 청크로 나누어 처리
+    chunk_size = 50
+    total_rows = len(existing_data)
     
-    for i, row in enumerate(existing_data, 1):
-        if i < START_ROW:
-            # 헤더 행은 건너뛰기
-            coordinates_data.append(["", ""])
-            continue
+    for chunk_start in range(START_ROW - 1, total_rows, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, total_rows)
+        chunk_data = existing_data[chunk_start:chunk_end]
+        
+        print(f"\n=== 청크 {chunk_start//chunk_size + 1} 처리 중 (행 {chunk_start + 1}-{chunk_end}) ===")
+        
+        # 현재 청크의 위도, 경도 데이터 수집
+        coordinates_data = []
+        
+        for i, row in enumerate(chunk_data, chunk_start + 1):
+            if i < START_ROW:
+                # 헤더 행은 건너뛰기
+                coordinates_data.append(["", ""])
+                continue
+                
+            if len(row) < 4:
+                # D열(주소)이 없는 경우
+                coordinates_data.append(["", ""])
+                continue
+                
+            address = row[3]  # D열의 주소
             
-        if len(row) < 4:
-            # D열(주소)이 없는 경우
-            coordinates_data.append(["", ""])
-            continue
+            if not address or address.strip() == "":
+                coordinates_data.append(["", ""])
+                continue
+                
+            print(f"처리 중: {i}행 - {address}")
             
-        address = row[3]  # D열의 주소
-        
-        if not address or address.strip() == "":
-            coordinates_data.append(["", ""])
-            continue
+            # 주소를 좌표로 변환
+            coordinates = geocoder.geocode_address(address.strip())
             
-        print(f"처리 중: {i}행 - {address}")
+            if coordinates:
+                latitude, longitude = coordinates
+                coordinates_data.append([latitude, longitude])
+                print(f"  → 위도: {latitude}, 경도: {longitude}")
+            else:
+                # 변환 실패 시 E열에 '변환실패' 입력
+                coordinates_data.append(["변환실패", ""])
+                print(f"  → 변환 실패")
+            
+            # API 호출 제한을 위한 대기
+            time.sleep(0.1)
         
-        # 주소를 좌표로 변환
-        coordinates = geocoder.geocode_address(address.strip())
+        # 현재 청크 데이터를 시트에 업데이트
+        print(f"청크 {chunk_start//chunk_size + 1} 변환 완료. 구글 시트에 업데이트 중...")
+        chunk_start_row = chunk_start + 1
+        chunk_range = f"{SHEET_NAME}!E{chunk_start_row}:F{chunk_end}"
+        sheets_updater.update_sheet_data(SPREADSHEET_ID, chunk_range, coordinates_data)
         
-        if coordinates:
-            latitude, longitude = coordinates
-            coordinates_data.append([latitude, longitude])
-            print(f"  → 위도: {latitude}, 경도: {longitude}")
-        else:
-            # 변환 실패 시 E열에 '변환실패' 입력
-            coordinates_data.append(["변환실패", ""])
-            print(f"  → 변환 실패")
+        print(f"청크 {chunk_start//chunk_size + 1} 업데이트 완료!")
         
-        # API 호출 제한을 위한 대기
-        time.sleep(0.1)
-    
-    # 모든 데이터 수집 완료 후 E, F열에 청크 단위로 입력
-    print("모든 주소 변환 완료. 구글 시트에 데이터를 입력합니다...")
-    coordinates_range = f"{SHEET_NAME}!E:F"
-    sheets_updater.update_sheet_data_in_chunks(SPREADSHEET_ID, coordinates_range, coordinates_data, chunk_size=50)
+        # 다음 청크 처리 전 대기
+        if chunk_end < total_rows:
+            print("다음 청크 처리 전 3초 대기...")
+            time.sleep(3)
     
     print("모든 작업이 완료되었습니다!")
 
