@@ -53,12 +53,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGoogleSheets } from '@/hooks/useGoogleSheets'
 import LoginModal from '@/components/LoginModal'
 import SalesPersonModal from '@/components/SalesPersonModal'
+import ConnectionTestModal from '@/components/ConnectionTestModal'
 import type { SalesPersonData } from '@/lib/googleSheets'
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState(0)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [salesPersonModalOpen, setSalesPersonModalOpen] = useState(false)
+  const [connectionTestModalOpen, setConnectionTestModalOpen] = useState(false)
   const [editingSalesPerson, setEditingSalesPerson] = useState<SalesPersonData | null>(null)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [searchTerm, setSearchTerm] = useState('')
@@ -114,6 +116,28 @@ export default function Home() {
         return await updateSalesPerson({ ...editingSalesPerson, ...data })
       }
       return { success: false, error: '편집할 영업사원 정보가 없습니다.' }
+    }
+  }
+
+  const handleGoogleSheetsTest = () => {
+    setConnectionTestModalOpen(true)
+  }
+
+  const handleConnectionTest = async () => {
+    try {
+      const response = await fetch('/api/salespeople/test')
+      const result = await response.json()
+      return result
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Google Sheets 연동에 실패했습니다.',
+        details: {
+          message: error instanceof Error ? error.message : '알 수 없는 오류',
+          timestamp: new Date().toISOString(),
+          connectionStatus: 'failed'
+        }
+      }
     }
   }
 
@@ -376,6 +400,15 @@ export default function Home() {
             primary="Google Sheets 연동" 
             secondary="데이터 동기화 설정" 
           />
+          <Button 
+            variant="outlined" 
+            size="small" 
+            onClick={handleGoogleSheetsTest}
+            disabled={sheetsLoading}
+            startIcon={sheetsLoading ? <CircularProgress size={16} /> : <RefreshIcon />}
+          >
+            연동 테스트
+          </Button>
         </ListItem>
         <Divider />
         <ListItem>
@@ -539,6 +572,13 @@ export default function Home() {
         salesPerson={editingSalesPerson}
         onSave={handleSaveSalesPerson}
         mode={modalMode}
+      />
+
+      {/* 연동 테스트 모달 */}
+      <ConnectionTestModal
+        open={connectionTestModalOpen}
+        onClose={() => setConnectionTestModalOpen(false)}
+        onTest={handleConnectionTest}
       />
 
       {/* 스낵바 */}
