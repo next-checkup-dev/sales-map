@@ -26,6 +26,10 @@ import {
   SpeedDialAction,
   SpeedDialIcon,
   ListItemIcon,
+  CircularProgress,
+  Button,
+  Alert,
+  Snackbar,
 } from '@mui/material'
 import {
   Map as MapIcon,
@@ -42,62 +46,115 @@ import {
   BarChart as ChartIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material'
+import { useAuth } from '@/hooks/useAuth'
+import { useGoogleSheets } from '@/hooks/useGoogleSheets'
+import LoginModal from '@/components/LoginModal'
+import SalesPersonModal from '@/components/SalesPersonModal'
+import type { SalesPersonData } from '@/lib/googleSheets'
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState(0)
-  const [isLoggedIn] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
+  const [salesPersonModalOpen, setSalesPersonModalOpen] = useState(false)
+  const [editingSalesPerson, setEditingSalesPerson] = useState<SalesPersonData | null>(null)
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'error'
+  }>({ open: false, message: '', severity: 'success' })
 
-  // 샘플 데이터
-  const salesPeople = [
-    {
-      id: 1,
-      name: '김영업',
-      position: '영업사원',
-      status: '활성',
-      location: '서울시 강남구',
-      sales: 15000000,
-      lastUpdate: '2024-01-15',
-      phone: '010-1234-5678',
-    },
-    {
-      id: 2,
-      name: '이매니저',
-      position: '영업매니저',
-      status: '활성',
-      location: '서울시 서초구',
-      sales: 25000000,
-      lastUpdate: '2024-01-14',
-      phone: '010-2345-6789',
-    },
-    {
-      id: 3,
-      name: '박대리',
-      position: '영업사원',
-      status: '비활성',
-      location: '부산시 해운대구',
-      sales: 8000000,
-      lastUpdate: '2024-01-13',
-      phone: '010-3456-7890',
-    },
-  ]
+  const { user, loading, logout } = useAuth()
+  const { 
+    salesPeople, 
+    loading: sheetsLoading, 
+    error: sheetsError,
+    fetchData,
+    addSalesPerson,
+    updateSalesPerson,
+    deleteSalesPerson 
+  } = useGoogleSheets()
 
+  const handleLogout = async () => {
+    await logout()
+  }
 
+  const handleAddSalesPerson = () => {
+    setModalMode('add')
+    setEditingSalesPerson(null)
+    setSalesPersonModalOpen(true)
+  }
+
+  const handleEditSalesPerson = (salesPerson: SalesPersonData) => {
+    setModalMode('edit')
+    setEditingSalesPerson(salesPerson)
+    setSalesPersonModalOpen(true)
+  }
+
+  const handleDeleteSalesPerson = async (id: string) => {
+    if (window.confirm('정말로 이 영업사원을 삭제하시겠습니까?')) {
+      const result = await deleteSalesPerson(id)
+      setSnackbar({
+        open: true,
+        message: result.success ? result.message! : result.error!,
+        severity: result.success ? 'success' : 'error'
+      })
+    }
+  }
+
+  const handleSaveSalesPerson = async (data: Omit<SalesPersonData, 'id'>) => {
+    if (modalMode === 'add') {
+      return await addSalesPerson(data)
+    } else {
+      if (editingSalesPerson) {
+        return await updateSalesPerson({ ...editingSalesPerson, ...data })
+      }
+      return { success: false, error: '편집할 영업사원 정보가 없습니다.' }
+    }
+  }
+
+  const filteredSalesPeople = salesPeople.filter(person =>
+    person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    person.location.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const speedDialActions = [
-    { icon: <AddIcon />, name: '새 영업사원', action: () => console.log('새 영업사원') },
-    { icon: <RefreshIcon />, name: '데이터 새로고침', action: () => console.log('새로고침') },
-    { icon: <NotificationsIcon />, name: '알림', action: () => console.log('알림') },
+    { 
+      icon: <AddIcon />, 
+      name: '새 영업사원', 
+      action: handleAddSalesPerson 
+    },
+    { 
+      icon: <RefreshIcon />, 
+      name: '데이터 새로고침', 
+      action: fetchData 
+    },
+    { 
+      icon: <NotificationsIcon />, 
+      name: '알림', 
+      action: () => console.log('알림') 
+    },
   ]
 
   const renderHomeTab = () => (
     <Box sx={{ pb: 7 }}>
+      {sheetsError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {sheetsError}
+        </Alert>
+      )}
+
       {/* 통계 카드들 */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="primary">
-              {salesPeople.length}
+              {sheetsLoading ? <CircularProgress size={24} /> : salesPeople.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               총 영업사원
@@ -107,7 +164,7 @@ export default function Home() {
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="success.main">
-              {salesPeople.filter(p => p.status === '활성').length}
+              {sheetsLoading ? <CircularProgress size={24} /> : salesPeople.filter(p => p.status === '활성').length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               활성 사원
@@ -117,7 +174,8 @@ export default function Home() {
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h6" color="primary">
-              {Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M
+              {sheetsLoading ? <CircularProgress size={20} /> : 
+                `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               총 매출
@@ -127,7 +185,10 @@ export default function Home() {
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h6" color="secondary">
-              {Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / salesPeople.length / 1000000)}M
+              {sheetsLoading ? <CircularProgress size={20} /> : 
+                salesPeople.length > 0 ? 
+                  `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / salesPeople.length / 1000000)}M` : 
+                  '0M'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               평균 매출
@@ -142,36 +203,42 @@ export default function Home() {
           <Typography variant="h6" sx={{ mb: 2 }}>
             최근 활동
           </Typography>
-          <List>
-            {salesPeople.slice(0, 3).map((person, index) => (
-              <Box key={person.id}>
-                <ListItem alignItems="flex-start">
-                  <ListItemAvatar>
-                    <Avatar>
-                      <PersonIcon />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={person.name}
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.primary">
-                          {person.position} • {person.location}
-                        </Typography>
-                        <Chip
-                          label={person.status}
-                          size="small"
-                          color={person.status === '활성' ? 'success' : 'default'}
-                          sx={{ mt: 0.5 }}
-                        />
-                      </Box>
-                    }
-                  />
-                </ListItem>
-                {index < 2 && <Divider variant="inset" component="li" />}
-              </Box>
-            ))}
-          </List>
+          {sheetsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <List>
+              {salesPeople.slice(0, 3).map((person, index) => (
+                <Box key={person.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemAvatar>
+                      <Avatar>
+                        <PersonIcon />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={person.name}
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.primary">
+                            {person.position} • {person.location}
+                          </Typography>
+                          <Chip
+                            label={person.status}
+                            size="small"
+                            color={person.status === '활성' ? 'success' : 'default'}
+                            sx={{ mt: 0.5 }}
+                          />
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                  {index < Math.min(2, salesPeople.length - 1) && <Divider variant="inset" component="li" />}
+                </Box>
+              ))}
+            </List>
+          )}
         </CardContent>
       </Card>
     </Box>
@@ -197,6 +264,9 @@ export default function Home() {
             <Typography variant="body1" color="text.secondary">
               카카오맵이 여기에 표시됩니다
             </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              {salesPeople.length}명의 영업사원 위치 정보
+            </Typography>
           </Box>
         </Box>
       </Paper>
@@ -211,52 +281,81 @@ export default function Home() {
           fullWidth
           size="small"
           placeholder="영업사원 검색..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
             startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
           }}
         />
       </Box>
 
+      {sheetsError && (
+        <Alert severity="error" sx={{ m: 2 }}>
+          {sheetsError}
+        </Alert>
+      )}
+
       {/* 영업사원 리스트 */}
-      <List>
-        {salesPeople.map((person, index) => (
-          <Box key={person.id}>
-            <ListItem alignItems="flex-start" sx={{ px: 2 }}>
-              <ListItemAvatar>
-                <Avatar>
-                  <PersonIcon />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="subtitle1">{person.name}</Typography>
-                    <Chip
-                      label={person.status}
-                      size="small"
-                      color={person.status === '활성' ? 'success' : 'default'}
-                    />
-                  </Box>
-                }
-                secondary={
-                  <Box>
-                    <Typography variant="body2" color="text.primary">
-                      {person.position} • {person.location}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {person.phone}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      매출: {person.sales.toLocaleString()}원
-                    </Typography>
-                  </Box>
-                }
-              />
-            </ListItem>
-            {index < salesPeople.length - 1 && <Divider />}
-          </Box>
-        ))}
-      </List>
+      {sheetsLoading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <List>
+          {filteredSalesPeople.map((person, index) => (
+            <Box key={person.id}>
+              <ListItem alignItems="flex-start" sx={{ px: 2 }}>
+                <ListItemAvatar>
+                  <Avatar>
+                    <PersonIcon />
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Typography variant="subtitle1">{person.name}</Typography>
+                      <Chip
+                        label={person.status}
+                        size="small"
+                        color={person.status === '활성' ? 'success' : 'default'}
+                      />
+                    </Box>
+                  }
+                  secondary={
+                    <Box>
+                      <Typography variant="body2" color="text.primary">
+                        {person.position} • {person.location}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {person.phone}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        매출: {person.sales.toLocaleString()}원
+                      </Typography>
+                    </Box>
+                  }
+                />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => handleEditSalesPerson(person)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    color="error"
+                    onClick={() => handleDeleteSalesPerson(person.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </ListItem>
+              {index < filteredSalesPeople.length - 1 && <Divider />}
+            </Box>
+          ))}
+        </List>
+      )}
     </Box>
   )
 
@@ -271,7 +370,7 @@ export default function Home() {
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="primary">
-                  {salesPeople.length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : salesPeople.length}
                 </Typography>
                 <Typography variant="body2">총 영업사원</Typography>
               </Box>
@@ -279,7 +378,7 @@ export default function Home() {
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="success.main">
-                  {salesPeople.filter(p => p.status === '활성').length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : salesPeople.filter(p => p.status === '활성').length}
                 </Typography>
                 <Typography variant="body2">활성 사원</Typography>
               </Box>
@@ -295,7 +394,8 @@ export default function Home() {
           </Typography>
           <Box sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h3" color="primary">
-              {Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M
+              {sheetsLoading ? <CircularProgress size={48} /> : 
+                `${Math.round(salesPeople.reduce((sum, p) => sum + p.sales, 0) / 1000000)}M`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               총 매출
@@ -313,7 +413,10 @@ export default function Home() {
           <ListItemIcon>
             <BusinessIcon />
           </ListItemIcon>
-          <ListItemText primary="Google Sheets 연동" secondary="데이터 동기화 설정" />
+          <ListItemText 
+            primary="Google Sheets 연동" 
+            secondary="데이터 동기화 설정" 
+          />
         </ListItem>
         <Divider />
         <ListItem>
@@ -332,12 +435,22 @@ export default function Home() {
         <Divider />
         <ListItem>
           <ListItemIcon>
-            {isLoggedIn ? <LogoutIcon /> : <LoginIcon />}
+            {user ? <LogoutIcon /> : <LoginIcon />}
           </ListItemIcon>
           <ListItemText 
-            primary={isLoggedIn ? "로그아웃" : "로그인"} 
-            secondary={isLoggedIn ? "계정에서 로그아웃" : "계정에 로그인"}
+            primary={user ? "로그아웃" : "로그인"} 
+            secondary={user ? "계정에서 로그아웃" : "계정에 로그인"}
           />
+          {user && (
+            <Button 
+              variant="outlined" 
+              size="small" 
+              onClick={handleLogout}
+              startIcon={<LogoutIcon />}
+            >
+              로그아웃
+            </Button>
+          )}
         </ListItem>
       </List>
     </Box>
@@ -351,6 +464,54 @@ export default function Home() {
     { label: '설정', icon: <SettingsIcon />, content: renderSettingsTab },
   ]
 
+  // 로딩 중일 때
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh' 
+      }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  // 로그인하지 않은 경우
+  if (!user) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        p: 3
+      }}>
+        <Typography variant="h4" sx={{ mb: 2, textAlign: 'center' }}>
+          영업사원 관리 시스템
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
+          영업사원 지도 및 현황을 관리하세요
+        </Typography>
+        <Button 
+          variant="contained" 
+          size="large"
+          onClick={() => setLoginModalOpen(true)}
+          startIcon={<LoginIcon />}
+        >
+          로그인
+        </Button>
+        
+        <LoginModal 
+          open={loginModalOpen} 
+          onClose={() => setLoginModalOpen(false)} 
+        />
+      </Box>
+    )
+  }
+
   return (
     <Box sx={{ flexGrow: 1, pb: 7 }}>
       {/* 헤더 */}
@@ -358,6 +519,9 @@ export default function Home() {
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             영업사원 관리
+          </Typography>
+          <Typography variant="body2" sx={{ mr: 2 }}>
+            {user.email}
           </Typography>
           <IconButton color="inherit">
             <NotificationsIcon />
@@ -408,6 +572,29 @@ export default function Home() {
           />
         ))}
       </SpeedDial>
+
+      {/* 영업사원 모달 */}
+      <SalesPersonModal
+        open={salesPersonModalOpen}
+        onClose={() => setSalesPersonModalOpen(false)}
+        salesPerson={editingSalesPerson}
+        onSave={handleSaveSalesPerson}
+        mode={modalMode}
+      />
+
+      {/* 스낵바 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
-}
+} 
