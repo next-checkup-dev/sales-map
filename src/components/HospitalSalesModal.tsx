@@ -270,12 +270,10 @@ export default function HospitalSalesModal({
                   label="세일즈 단계"
                   onChange={handleChange('salesStage')}
                 >
-                  <MenuItem value="리드">리드</MenuItem>
-                  <MenuItem value="프로스펙트">프로스펙트</MenuItem>
-                  <MenuItem value="제안">제안</MenuItem>
-                  <MenuItem value="협상">협상</MenuItem>
-                  <MenuItem value="계약">계약</MenuItem>
-                  <MenuItem value="완료">완료</MenuItem>
+                  <MenuItem value="S">S (최우선)</MenuItem>
+                  <MenuItem value="A">A (우선)</MenuItem>
+                  <MenuItem value="B">B (일반)</MenuItem>
+                  <MenuItem value="C">C (보류)</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

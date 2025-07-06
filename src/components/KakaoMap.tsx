@@ -344,13 +344,10 @@ export default function KakaoMap({
             onChange={handleFilterChange}
           >
             <MenuItem value="all">전체</MenuItem>
-            <MenuItem value="리드">리드</MenuItem>
-            <MenuItem value="프로스펙트">프로스펙트</MenuItem>
-            <MenuItem value="제안">제안</MenuItem>
-            <MenuItem value="협상">협상</MenuItem>
-            <MenuItem value="계약">계약</MenuItem>
-            <MenuItem value="완료">완료</MenuItem>
-            <MenuItem value="실패">실패</MenuItem>
+            <MenuItem value="S">S (최우선)</MenuItem>
+            <MenuItem value="A">A (우선)</MenuItem>
+            <MenuItem value="B">B (일반)</MenuItem>
+            <MenuItem value="C">C (보류)</MenuItem>
           </Select>
         </FormControl>
       </Box>
@@ -403,7 +400,7 @@ export default function KakaoMap({
           세일즈 단계
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {['리드', '프로스펙트', '제안', '협상', '계약', '완료', '실패'].map(stage => (
+          {['S', 'A', 'B', 'C'].map(stage => (
             <Box key={stage} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Box
                 sx={{
@@ -414,7 +411,11 @@ export default function KakaoMap({
                   border: '1px solid #ccc'
                 }}
               />
-              <Typography variant="caption">{stage}</Typography>
+              <Typography variant="caption">
+                {stage === 'S' ? 'S (최우선)' : 
+                 stage === 'A' ? 'A (우선)' : 
+                 stage === 'B' ? 'B (일반)' : 'C (보류)'}
+              </Typography>
             </Box>
           ))}
         </Box>

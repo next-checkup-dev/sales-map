@@ -217,13 +217,10 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
 // 세일즈 단계별 색상 매핑
 export function getSalesStageColor(stage: string): string {
   const colorMap: { [key: string]: string } = {
-    '리드': '#FF6B6B',
-    '프로스펙트': '#4ECDC4',
-    '제안': '#45B7D1',
-    '협상': '#96CEB4',
-    '계약': '#FFEAA7',
-    '완료': '#DDA0DD',
-    '실패': '#FF8A80'
+    'S': '#FF6B6B', // 최우선 - 빨간색
+    'A': '#4ECDC4', // 우선 - 청록색
+    'B': '#45B7D1', // 일반 - 파란색
+    'C': '#96CEB4', // 보류 - 연두색
   }
   
   return colorMap[stage] || '#CCCCCC'

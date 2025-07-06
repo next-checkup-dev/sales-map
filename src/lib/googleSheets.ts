@@ -97,6 +97,8 @@ export async function readHospitalSalesData(): Promise<HospitalSalesData[]> {
       visit6: findColumnIndex(headers, ['6차 방문', '6차']) !== -1 ? findColumnIndex(headers, ['6차 방문', '6차']) : 23,
       visit6Content: findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) !== -1 ? findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) : 24,
       lastUpdate: findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) !== -1 ? findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) : 25,
+      lat: findColumnIndex(headers, ['lat', '위도', 'latitude']) !== -1 ? findColumnIndex(headers, ['lat', '위도', 'latitude']) : 26,
+      lng: findColumnIndex(headers, ['lng', '경도', 'longitude']) !== -1 ? findColumnIndex(headers, ['lng', '경도', 'longitude']) : 27,
     }
     
     console.log('헤더 매핑 결과:', headers)
@@ -110,34 +112,49 @@ export async function readHospitalSalesData(): Promise<HospitalSalesData[]> {
 
     const rows = response.data.values || []
     
-    return rows.map((row, index) => ({
-      id: row[columnMap.id] || `hospital-${index + 1}`,
-      department: row[columnMap.department] || '',
-      hospitalName: row[columnMap.hospitalName] || '',
-      clientCompany: row[columnMap.clientCompany] || '',
-      address: row[columnMap.address] || '',
-      phone: row[columnMap.phone] || '',
-      salesPerson: row[columnMap.salesPerson] || '',
-      visitCount: parseInt(row[columnMap.visitCount]) || 0,
-      firstVisitDate: row[columnMap.firstVisitDate] || '',
-      lastVisitDate: row[columnMap.lastVisitDate] || '',
-      response: row[columnMap.response] || '',
-      salesStage: row[columnMap.salesStage] || '',
-      nextStep: row[columnMap.nextStep] || '',
-      visit1: row[columnMap.visit1] || '',
-      visit1Content: row[columnMap.visit1Content] || '',
-      visit2: row[columnMap.visit2] || '',
-      visit2Content: row[columnMap.visit2Content] || '',
-      visit3: row[columnMap.visit3] || '',
-      visit3Content: row[columnMap.visit3Content] || '',
-      visit4: row[columnMap.visit4] || '',
-      visit4Content: row[columnMap.visit4Content] || '',
-      visit5: row[columnMap.visit5] || '',
-      visit5Content: row[columnMap.visit5Content] || '',
-      visit6: row[columnMap.visit6] || '',
-      visit6Content: row[columnMap.visit6Content] || '',
-      lastUpdate: row[columnMap.lastUpdate] || new Date().toISOString().split('T')[0],
-    }))
+    return rows.map((row, index) => {
+      const visitData = {
+        visit1: row[columnMap.visit1] || '',
+        visit2: row[columnMap.visit2] || '',
+        visit3: row[columnMap.visit3] || '',
+        visit4: row[columnMap.visit4] || '',
+        visit5: row[columnMap.visit5] || '',
+        visit6: row[columnMap.visit6] || ''
+      }
+      
+      const calculatedVisitInfo = calculateVisitInfo(visitData)
+      
+      return {
+        id: row[columnMap.id] || `hospital-${index + 1}`,
+        department: row[columnMap.department] || '',
+        hospitalName: row[columnMap.hospitalName] || '',
+        clientCompany: row[columnMap.clientCompany] || '',
+        address: row[columnMap.address] || '',
+        phone: row[columnMap.phone] || '',
+        salesPerson: row[columnMap.salesPerson] || '',
+        visitCount: calculatedVisitInfo.visitCount,
+        firstVisitDate: calculatedVisitInfo.firstVisitDate,
+        lastVisitDate: calculatedVisitInfo.lastVisitDate,
+        response: row[columnMap.response] || '',
+        salesStage: row[columnMap.salesStage] || '',
+        nextStep: row[columnMap.nextStep] || '',
+        visit1: visitData.visit1,
+        visit1Content: row[columnMap.visit1Content] || '',
+        visit2: visitData.visit2,
+        visit2Content: row[columnMap.visit2Content] || '',
+        visit3: visitData.visit3,
+        visit3Content: row[columnMap.visit3Content] || '',
+        visit4: visitData.visit4,
+        visit4Content: row[columnMap.visit4Content] || '',
+        visit5: visitData.visit5,
+        visit5Content: row[columnMap.visit5Content] || '',
+        visit6: visitData.visit6,
+        visit6Content: row[columnMap.visit6Content] || '',
+        lastUpdate: row[columnMap.lastUpdate] || new Date().toISOString().split('T')[0],
+        lat: row[columnMap.lat] ? parseFloat(row[columnMap.lat]) : undefined,
+        lng: row[columnMap.lng] ? parseFloat(row[columnMap.lng]) : undefined,
+      }
+    })
   } catch (error) {
     console.error('Google Sheets 데이터 읽기 오류:', error)
     return []
@@ -201,6 +218,26 @@ export async function updateHospitalSalesData(data: HospitalSalesData): Promise<
   try {
     const sheets = getGoogleSheetsClient()
     
+    // 방문일자와 방문횟수 자동 계산
+    const visitData = {
+      visit1: data.visit1,
+      visit2: data.visit2,
+      visit3: data.visit3,
+      visit4: data.visit4,
+      visit5: data.visit5,
+      visit6: data.visit6
+    }
+    const calculatedVisitInfo = calculateVisitInfo(visitData)
+    
+    // 업데이트할 데이터 준비 (계산된 값 사용)
+    const updatedData = {
+      ...data,
+      visitCount: calculatedVisitInfo.visitCount,
+      firstVisitDate: calculatedVisitInfo.firstVisitDate,
+      lastVisitDate: calculatedVisitInfo.lastVisitDate,
+      lastUpdate: new Date().toISOString().split('T')[0]
+    }
+    
     // 먼저 해당 ID의 행을 찾기
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
@@ -217,38 +254,40 @@ export async function updateHospitalSalesData(data: HospitalSalesData): Promise<
 
     const values = [
       [
-        data.id,
-        data.department,
-        data.hospitalName,
-        data.clientCompany,
-        data.address,
-        data.phone,
-        data.salesPerson,
-        data.visitCount,
-        data.firstVisitDate,
-        data.lastVisitDate,
-        data.response,
-        data.salesStage,
-        data.nextStep,
-        data.visit1,
-        data.visit1Content,
-        data.visit2,
-        data.visit2Content,
-        data.visit3,
-        data.visit3Content,
-        data.visit4,
-        data.visit4Content,
-        data.visit5,
-        data.visit5Content,
-        data.visit6,
-        data.visit6Content,
-        data.lastUpdate,
+        updatedData.id,
+        updatedData.department,
+        updatedData.hospitalName,
+        updatedData.clientCompany,
+        updatedData.address,
+        updatedData.phone,
+        updatedData.salesPerson,
+        updatedData.visitCount,
+        updatedData.firstVisitDate,
+        updatedData.lastVisitDate,
+        updatedData.response,
+        updatedData.salesStage,
+        updatedData.nextStep,
+        updatedData.visit1,
+        updatedData.visit1Content,
+        updatedData.visit2,
+        updatedData.visit2Content,
+        updatedData.visit3,
+        updatedData.visit3Content,
+        updatedData.visit4,
+        updatedData.visit4Content,
+        updatedData.visit5,
+        updatedData.visit5Content,
+        updatedData.visit6,
+        updatedData.visit6Content,
+        updatedData.lastUpdate,
+        updatedData.lat || '',
+        updatedData.lng || '',
       ]
     ]
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `A${rowIndex + 1}:Z${rowIndex + 1}`,
+      range: `A${rowIndex + 1}:AB${rowIndex + 1}`,
       valueInputOption: 'RAW',
       requestBody: {
         values,
@@ -304,5 +343,38 @@ export async function deleteSalesPersonData(id: string): Promise<boolean> {
   } catch (error) {
     console.error('Google Sheets 데이터 삭제 오류:', error)
     return false
+  }
+}
+
+// 방문일자와 방문횟수를 자동 계산하는 함수
+function calculateVisitInfo(data: {
+  visit1: string
+  visit2: string
+  visit3: string
+  visit4: string
+  visit5: string
+  visit6: string
+}): {
+  visitCount: number
+  firstVisitDate: string
+  lastVisitDate: string
+} {
+  const visits = [
+    data.visit1,
+    data.visit2,
+    data.visit3,
+    data.visit4,
+    data.visit5,
+    data.visit6
+  ].filter(visit => visit && visit.trim() !== '')
+
+  const visitCount = visits.length
+  const firstVisitDate = visits.length > 0 ? visits[0] : ''
+  const lastVisitDate = visits.length > 0 ? visits[visits.length - 1] : ''
+
+  return {
+    visitCount,
+    firstVisitDate,
+    lastVisitDate
   }
 } 
