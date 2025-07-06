@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -44,8 +44,6 @@ import {
   BarChart as ChartIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
   LocalHospital as LocalHospitalIcon,
 } from '@mui/icons-material'
 import { useAuth } from '@/hooks/useAuth'
@@ -53,6 +51,7 @@ import { useGoogleSheets } from '@/hooks/useGoogleSheets'
 import LoginModal from '@/components/LoginModal'
 import HospitalSalesModal from '@/components/HospitalSalesModal'
 import ConnectionTestModal from '@/components/ConnectionTestModal'
+import VirtualizedList from '@/components/VirtualizedList'
 import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export default function Home() {
@@ -79,6 +78,15 @@ export default function Home() {
     updateHospitalSales,
     deleteHospitalSales 
   } = useGoogleSheets()
+
+  // 탭 변경 시 데이터 로딩 최적화
+  const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue)
+    // 병원 탭이나 현황 탭으로 이동할 때만 데이터 새로고침
+    if (newValue === 2 || newValue === 3) {
+      fetchData(false)
+    }
+  }, [fetchData])
 
   const handleLogout = async () => {
     await logout()
@@ -156,7 +164,7 @@ export default function Home() {
     { 
       icon: <RefreshIcon />, 
       name: '데이터 새로고침', 
-      action: fetchData 
+      action: () => fetchData(true) 
     },
     { 
       icon: <NotificationsIcon />, 
@@ -296,64 +304,14 @@ export default function Home() {
         </Alert>
       )}
 
-      {/* 병원 리스트 */}
-      {sheetsLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-          <CircularProgress />
-        </Box>
-      ) : (
-        <List>
-          {filteredHospitalSales.map((hospital, index) => (
-            <Box key={hospital.id}>
-              <ListItem alignItems="flex-start" sx={{ px: 2 }}>
-                <ListItemAvatar>
-                  <Avatar>
-                    <LocalHospitalIcon />
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="subtitle1">{hospital.hospitalName}</Typography>
-                      <Chip
-                        label={`방문 ${hospital.visitCount}회`}
-                        size="small"
-                        color={hospital.visitCount > 0 ? 'success' : 'default'}
-                      />
-                    </Box>
-                  }
-                  secondary={
-                    <Box>
-                      <Typography variant="body2" color="text.primary">
-                        {hospital.department} • {hospital.address}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {hospital.phone} • 담당: {hospital.salesPerson}
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <IconButton 
-                    size="small" 
-                    onClick={() => handleEditHospitalSales(hospital)}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton 
-                    size="small" 
-                    color="error"
-                    onClick={() => handleDeleteHospitalSales(hospital.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </ListItem>
-              {index < filteredHospitalSales.length - 1 && <Divider />}
-            </Box>
-          ))}
-        </List>
-      )}
+      {/* 병원 리스트 (가상화 적용) */}
+      <VirtualizedList
+        data={filteredHospitalSales}
+        containerHeight={600} // 고정 높이 사용
+        onEdit={handleEditHospitalSales}
+        onDelete={handleDeleteHospitalSales}
+        loading={sheetsLoading}
+      />
     </Box>
   )
 
@@ -529,7 +487,7 @@ export default function Home() {
       {/* 하단 네비게이션 */}
       <BottomNavigation
         value={currentTab}
-        onChange={(event, newValue) => setCurrentTab(newValue)}
+        onChange={handleTabChange}
         sx={{
           position: 'fixed',
           bottom: 0,

@@ -5,18 +5,29 @@ export function useGoogleSheets() {
   const [hospitalSales, setHospitalSales] = useState<HospitalSalesData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastFetchTime, setLastFetchTime] = useState<number>(0)
+  const [cacheExpiry] = useState(5 * 60 * 1000) // 5분 캐시
 
-  // 데이터 불러오기
-  const fetchData = useCallback(async () => {
+    // 데이터 불러오기 (캐싱 적용)
+  const fetchData = useCallback(async (forceRefresh = false) => {
+    const now = Date.now()
+    
+    // 캐시가 유효하고 강제 새로고침이 아닌 경우 스킵
+    if (!forceRefresh && now - lastFetchTime < cacheExpiry && hospitalSales.length > 0) {
+      console.log('캐시된 데이터 사용')
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
-      
+
       const response = await fetch('/api/salespeople')
       const result = await response.json()
       
       if (result.success) {
         setHospitalSales(result.data)
+        setLastFetchTime(now)
       } else {
         setError(result.error || '데이터를 불러오는데 실패했습니다.')
       }
@@ -26,7 +37,7 @@ export function useGoogleSheets() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [lastFetchTime, cacheExpiry, hospitalSales.length])
 
   // 새로운 병원 영업 데이터 추가
   const addHospitalSales = useCallback(async (data: Omit<HospitalSalesData, 'id'>) => {
@@ -110,9 +121,14 @@ export function useGoogleSheets() {
     }
   }, [fetchData])
 
-  // 초기 데이터 로드
+  // 초기 데이터 로드 (지연 로딩)
   useEffect(() => {
-    fetchData()
+    // 컴포넌트 마운트 시 즉시 로딩하지 않고 필요할 때 로딩
+    const timer = setTimeout(() => {
+      fetchData()
+    }, 100) // 100ms 지연
+
+    return () => clearTimeout(timer)
   }, [fetchData])
 
   return {
