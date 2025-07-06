@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   AppBar,
   Toolbar,
   Typography,
   Container,
   Box,
-  Paper,
   Grid,
   Card,
   CardContent,
@@ -80,6 +79,18 @@ export default function Home() {
     updateHospitalSales,
     deleteHospitalSales 
   } = useGoogleSheets()
+
+  // 서울권역 필터링 함수
+  const filterSeoulArea = useCallback((hospitals: HospitalSalesData[]) => {
+    return hospitals.filter(hospital => 
+      hospital.address && 
+      hospital.address.trim() !== '' && 
+      hospital.address.startsWith('서울특별시')
+    )
+  }, [])
+
+  // 서울권역 데이터만 필터링
+  const seoulHospitalSales = filterSeoulArea(hospitalSales)
 
   // 탭 변경 시 데이터 로딩 최적화
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
@@ -157,7 +168,7 @@ export default function Home() {
     }
   }
 
-  const filteredHospitalSales = hospitalSales.filter(hospital =>
+  const filteredHospitalSales = seoulHospitalSales.filter(hospital =>
     hospital.hospitalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     hospital.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
     hospital.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -195,24 +206,23 @@ export default function Home() {
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="primary">
-              {sheetsLoading ? <CircularProgress size={24} /> : hospitalSales.length}
+              {sheetsLoading ? <CircularProgress size={24} /> : seoulHospitalSales.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              총 병원
+              서울권역 병원
             </Typography>
           </Card>
         </Grid>
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="success.main">
-              {sheetsLoading ? <CircularProgress size={24} /> : hospitalSales.filter(h => h.visitCount > 0).length}
+              {sheetsLoading ? <CircularProgress size={24} /> : seoulHospitalSales.filter(h => h.visitCount > 0).length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              방문 병원
+              방문 완료
             </Typography>
           </Card>
         </Grid>
-
       </Grid>
 
       {/* 최근 활동 */}
@@ -263,29 +273,16 @@ export default function Home() {
   )
 
   const renderMapTab = () => {
-    // 서울특별시로 시작하는 병원만 필터링
-    const seoulHospitals = hospitalSales.filter(h => h.address?.startsWith('서울특별시'));
-
     return (
       <Box sx={{ pb: 7, height: 'calc(100vh - 120px)' }}>
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-            <Typography variant="h6">🗺️ 서울특별시 병원 지도</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              주소가 &apos;서울특별시&apos;로 시작하는 병원만 지도에 표시됩니다. ({seoulHospitals.length}개)
-            </Typography>
-          </Box>
-          <Box sx={{ flexGrow: 1, position: 'relative' }}>
-            <KakaoMap
-              hospitals={seoulHospitals}
-              loading={sheetsLoading}
-              onMarkerClick={handleMapMarkerClick}
-            />
-          </Box>
-        </Paper>
+        <KakaoMap 
+          hospitals={seoulHospitalSales}
+          loading={sheetsLoading}
+          onMarkerClick={handleMapMarkerClick}
+        />
       </Box>
-    );
-  };
+    )
+  }
 
   const renderHospitalSalesTab = () => (
     <Box sx={{ pb: 7 }}>
@@ -325,21 +322,21 @@ export default function Home() {
       <Card sx={{ m: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            병원 영업 현황
+            서울권역 병원 영업 현황
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="primary">
-                  {sheetsLoading ? <CircularProgress size={32} /> : hospitalSales.length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : seoulHospitalSales.length}
                 </Typography>
-                <Typography variant="body2">총 병원</Typography>
+                <Typography variant="body2">서울권역 병원</Typography>
               </Box>
             </Grid>
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="success.main">
-                  {sheetsLoading ? <CircularProgress size={32} /> : hospitalSales.filter(h => h.visitCount > 0).length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : seoulHospitalSales.filter(h => h.visitCount > 0).length}
                 </Typography>
                 <Typography variant="body2">방문 병원</Typography>
               </Box>
@@ -347,8 +344,6 @@ export default function Home() {
           </Grid>
         </CardContent>
       </Card>
-
-
     </Box>
   )
 
@@ -418,6 +413,35 @@ export default function Home() {
     { label: '현황', icon: <ChartIcon />, content: renderAnalyticsTab },
     { label: '설정', icon: <SettingsIcon />, content: renderSettingsTab },
   ]
+
+  // 좌표 변환 및 Google Sheets 업데이트 자동화
+  useEffect(() => {
+    // lat/lng이 없는 병원만 선별
+    const hospitalsToGeocode = seoulHospitalSales.filter(h => !h.lat || !h.lng)
+    if (hospitalsToGeocode.length === 0) return
+
+    hospitalsToGeocode.forEach(async (hospital) => {
+      try {
+        // 1. 주소 → 좌표 변환
+        const res = await fetch(`/api/geocode?address=${encodeURIComponent(hospital.address)}`)
+        const result = await res.json()
+        if (result.success && result.data) {
+          const { lat, lng } = result.data
+          // 2. Google Sheets에 lat/lng 업데이트
+          await fetch('/api/salespeople', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...hospital, lat, lng })
+          })
+          // 3. 프론트 상태에도 즉시 반영 (fetchData로 새로고침)
+          fetchData(false)
+        }
+      } catch (e) {
+        // 실패 시 무시 (콘솔만)
+        console.error('좌표 변환/업데이트 실패:', hospital.hospitalName, e)
+      }
+    })
+  }, [seoulHospitalSales, fetchData])
 
   // 로딩 중일 때
   if (loading) {
