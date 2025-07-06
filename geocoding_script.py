@@ -120,34 +120,81 @@ class GoogleSheetsUpdater:
             print(f"시트 데이터 가져오기 실패: {str(e)}")
             raise
     
-    def update_sheet_data(self, spreadsheet_id: str, range_name: str, values: list):
+    def update_sheet_data(self, spreadsheet_id: str, range_name: str, values: list, max_retries=3):
         """
-        구글 시트에 데이터 업데이트
+        구글 시트에 데이터 업데이트 (재시도 로직 포함)
         
         Args:
             spreadsheet_id (str): 스프레드시트 ID
             range_name (str): 범위 (예: 'Sheet1!E:F')
             values (list): 업데이트할 데이터
+            max_retries (int): 최대 재시도 횟수
         """
         if self.service is None:
             raise Exception("구글 API 서비스가 초기화되지 않았습니다. authenticate() 메서드를 먼저 호출하세요.")
+        
+        for attempt in range(max_retries):
+            try:
+                body = {
+                    'values': values
+                }
+                
+                result = self.service.spreadsheets().values().update(
+                    spreadsheetId=spreadsheet_id,
+                    range=range_name,
+                    valueInputOption='RAW',
+                    body=body
+                ).execute()
+                
+                print(f"업데이트 완료: {result.get('updatedCells')}개 셀")
+                return
+                
+            except Exception as e:
+                print(f"시트 업데이트 실패 (시도 {attempt + 1}/{max_retries}): {str(e)}")
+                if attempt < max_retries - 1:
+                    print("5초 후 재시도합니다...")
+                    time.sleep(5)
+                else:
+                    print("최대 재시도 횟수 초과. 업데이트를 건너뜁니다.")
+                    raise
+    
+    def update_sheet_data_in_chunks(self, spreadsheet_id: str, range_name: str, values: list, chunk_size=50):
+        """
+        구글 시트에 데이터를 청크 단위로 업데이트
+        
+        Args:
+            spreadsheet_id (str): 스프레드시트 ID
+            range_name (str): 범위 (예: 'Sheet1!E:F')
+            values (list): 업데이트할 데이터
+            chunk_size (int): 한 번에 처리할 행 수
+        """
+        if not values:
+            print("업데이트할 데이터가 없습니다.")
+            return
             
-        try:
-            body = {
-                'values': values
-            }
+        total_rows = len(values)
+        print(f"총 {total_rows}행을 {chunk_size}행씩 나누어 업데이트합니다...")
+        
+        for i in range(0, total_rows, chunk_size):
+            chunk = values[i:i + chunk_size]
+            chunk_start_row = i + 1  # 1부터 시작하는 행 번호
             
-            result = self.service.spreadsheets().values().update(
-                spreadsheetId=spreadsheet_id,
-                range=range_name,
-                valueInputOption='RAW',
-                body=body
-            ).execute()
+            # 범위 계산 (예: Sheet1!E2:F51)
+            if '!' in range_name:
+                sheet_name = range_name.split('!')[0]
+                columns = range_name.split('!')[1].split(':')[0]  # E:F에서 E만 추출
+                chunk_range = f"{sheet_name}!{columns}{chunk_start_row}:{columns}{chunk_start_row + len(chunk) - 1}"
+            else:
+                chunk_range = f"{range_name}{chunk_start_row}:{range_name}{chunk_start_row + len(chunk) - 1}"
             
-            print(f"업데이트 완료: {result.get('updatedCells')}개 셀")
-        except Exception as e:
-            print(f"시트 업데이트 실패: {str(e)}")
-            raise
+            print(f"청크 {i//chunk_size + 1} 업데이트 중... (행 {chunk_start_row}-{chunk_start_row + len(chunk) - 1})")
+            
+            try:
+                self.update_sheet_data(spreadsheet_id, chunk_range, chunk)
+                time.sleep(1)  # 청크 간 대기
+            except Exception as e:
+                print(f"청크 업데이트 실패: {str(e)}")
+                continue
 
 def main():
     # 설정값 - 실제 값으로 수정하세요!
@@ -228,10 +275,10 @@ def main():
         # API 호출 제한을 위한 대기
         time.sleep(0.1)
     
-    # 모든 데이터 수집 완료 후 E, F열에 한 번에 입력
+    # 모든 데이터 수집 완료 후 E, F열에 청크 단위로 입력
     print("모든 주소 변환 완료. 구글 시트에 데이터를 입력합니다...")
     coordinates_range = f"{SHEET_NAME}!E:F"
-    sheets_updater.update_sheet_data(SPREADSHEET_ID, coordinates_range, coordinates_data)
+    sheets_updater.update_sheet_data_in_chunks(SPREADSHEET_ID, coordinates_range, coordinates_data, chunk_size=50)
     
     print("모든 작업이 완료되었습니다!")
 
