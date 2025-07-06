@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { SalesPersonData } from '@/lib/googleSheets'
+import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export function useGoogleSheets() {
-  const [salesPeople, setSalesPeople] = useState<SalesPersonData[]>([])
+  const [hospitalSales, setHospitalSales] = useState<HospitalSalesData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -16,7 +16,7 @@ export function useGoogleSheets() {
       const result = await response.json()
       
       if (result.success) {
-        setSalesPeople(result.data)
+        setHospitalSales(result.data)
       } else {
         setError(result.error || '데이터를 불러오는데 실패했습니다.')
       }
@@ -28,12 +28,12 @@ export function useGoogleSheets() {
     }
   }, [])
 
-  // 새로운 영업사원 추가
-  const addSalesPerson = useCallback(async (data: Omit<SalesPersonData, 'id'>) => {
+  // 새로운 병원 영업 데이터 추가
+  const addHospitalSales = useCallback(async (data: Omit<HospitalSalesData, 'id'>) => {
     try {
-      const newData: SalesPersonData = {
+      const newData: HospitalSalesData = {
         ...data,
-        id: `user-${Date.now()}`, // 임시 ID 생성
+        id: `hospital-${Date.now()}`, // 임시 ID 생성
         lastUpdate: new Date().toISOString().split('T')[0],
       }
 
@@ -54,15 +54,15 @@ export function useGoogleSheets() {
         return { success: false, error: result.error }
       }
     } catch (err) {
-      console.error('영업사원 추가 오류:', err)
-      return { success: false, error: '영업사원 추가에 실패했습니다.' }
+      console.error('병원 영업 데이터 추가 오류:', err)
+      return { success: false, error: '병원 영업 데이터 추가에 실패했습니다.' }
     }
   }, [fetchData])
 
-  // 영업사원 정보 업데이트
-  const updateSalesPerson = useCallback(async (data: SalesPersonData) => {
+  // 병원 영업 데이터 업데이트
+  const updateHospitalSales = useCallback(async (data: HospitalSalesData) => {
     try {
-      const updatedData: SalesPersonData = {
+      const updatedData: HospitalSalesData = {
         ...data,
         lastUpdate: new Date().toISOString().split('T')[0],
       }
@@ -84,13 +84,13 @@ export function useGoogleSheets() {
         return { success: false, error: result.error }
       }
     } catch (err) {
-      console.error('영업사원 업데이트 오류:', err)
-      return { success: false, error: '영업사원 업데이트에 실패했습니다.' }
+      console.error('병원 영업 데이터 업데이트 오류:', err)
+      return { success: false, error: '병원 영업 데이터 업데이트에 실패했습니다.' }
     }
   }, [fetchData])
 
-  // 영업사원 삭제
-  const deleteSalesPerson = useCallback(async (id: string) => {
+  // 병원 영업 데이터 삭제
+  const deleteHospitalSales = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/salespeople?id=${id}`, {
         method: 'DELETE',
@@ -105,8 +105,8 @@ export function useGoogleSheets() {
         return { success: false, error: result.error }
       }
     } catch (err) {
-      console.error('영업사원 삭제 오류:', err)
-      return { success: false, error: '영업사원 삭제에 실패했습니다.' }
+      console.error('병원 영업 데이터 삭제 오류:', err)
+      return { success: false, error: '병원 영업 데이터 삭제에 실패했습니다.' }
     }
   }, [fetchData])
 
@@ -116,12 +116,12 @@ export function useGoogleSheets() {
   }, [fetchData])
 
   return {
-    salesPeople,
+    hospitalSales,
     loading,
     error,
     fetchData,
-    addSalesPerson,
-    updateSalesPerson,
-    deleteSalesPerson,
+    addHospitalSales,
+    updateHospitalSales,
+    deleteHospitalSales,
   }
 } 

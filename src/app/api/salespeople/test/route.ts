@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readSalesPeopleData } from '@/lib/googleSheets'
+import { readHospitalSalesData, type HospitalSalesData } from '@/lib/googleSheets'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +9,7 @@ export async function GET() {
     const startTime = Date.now()
     
     // 데이터 읽기 테스트
-    const data = await readSalesPeopleData()
+    const data = await readHospitalSalesData()
     const endTime = Date.now()
     const responseTime = endTime - startTime
 
@@ -20,46 +20,48 @@ export async function GET() {
       invalidRecords: 0,
       missingFields: [] as string[],
       dataQuality: {
-        hasName: 0,
-        hasEmail: 0,
-        hasPosition: 0,
-        hasLocation: 0,
+        hasDepartment: 0,
+        hasHospitalName: 0,
+        hasClientCompany: 0,
+        hasAddress: 0,
         hasPhone: 0,
-        hasCoordinates: 0
+        hasSalesPerson: 0,
+        hasVisitCount: 0,
+        hasSalesStage: 0
       }
     }
 
     // 각 레코드 검증
-    data.forEach(record => {
+    data.forEach((record: HospitalSalesData) => {
       let isValid = true
       
       // 필수 필드 확인
-      if (!record.name || record.name.trim() === '') {
-        validationResults.missingFields.push('이름')
+      if (!record.department || record.department.trim() === '') {
+        validationResults.missingFields.push('진료과')
         isValid = false
       } else {
-        validationResults.dataQuality.hasName++
+        validationResults.dataQuality.hasDepartment++
       }
       
-      if (!record.email || record.email.trim() === '') {
-        validationResults.missingFields.push('이메일')
+      if (!record.hospitalName || record.hospitalName.trim() === '') {
+        validationResults.missingFields.push('의원명')
         isValid = false
       } else {
-        validationResults.dataQuality.hasEmail++
+        validationResults.dataQuality.hasHospitalName++
       }
       
-      if (!record.position || record.position.trim() === '') {
-        validationResults.missingFields.push('직책')
+      if (!record.clientCompany || record.clientCompany.trim() === '') {
+        validationResults.missingFields.push('수탁사')
         isValid = false
       } else {
-        validationResults.dataQuality.hasPosition++
+        validationResults.dataQuality.hasClientCompany++
       }
       
-      if (!record.location || record.location.trim() === '') {
-        validationResults.missingFields.push('위치')
+      if (!record.address || record.address.trim() === '') {
+        validationResults.missingFields.push('주소')
         isValid = false
       } else {
-        validationResults.dataQuality.hasLocation++
+        validationResults.dataQuality.hasAddress++
       }
       
       if (!record.phone || record.phone.trim() === '') {
@@ -69,9 +71,21 @@ export async function GET() {
         validationResults.dataQuality.hasPhone++
       }
       
-      // 좌표 정보 확인
-      if (record.latitude && record.longitude) {
-        validationResults.dataQuality.hasCoordinates++
+      if (!record.salesPerson || record.salesPerson.trim() === '') {
+        validationResults.missingFields.push('영업담당자')
+        isValid = false
+      } else {
+        validationResults.dataQuality.hasSalesPerson++
+      }
+      
+      // 방문 횟수 확인
+      if (record.visitCount > 0) {
+        validationResults.dataQuality.hasVisitCount++
+      }
+      
+      // 세일즈 단계 확인
+      if (record.salesStage && record.salesStage.trim() !== '') {
+        validationResults.dataQuality.hasSalesStage++
       }
       
       if (isValid) {
@@ -95,18 +109,22 @@ export async function GET() {
         timestamp: new Date().toISOString(),
         validation: validationResults,
         dataSummary: {
-          totalFields: data.length * 6, // ID, 이름, 이메일, 직책, 위치, 전화번호
-          filledFields: validationResults.dataQuality.hasName + 
-                       validationResults.dataQuality.hasEmail + 
-                       validationResults.dataQuality.hasPosition + 
-                       validationResults.dataQuality.hasLocation + 
-                       validationResults.dataQuality.hasPhone,
+          totalFields: data.length * 8, // ID, 진료과, 의원명, 수탁사, 주소, 전화번호, 영업담당자, 세일즈단계
+          filledFields: validationResults.dataQuality.hasDepartment + 
+                       validationResults.dataQuality.hasHospitalName + 
+                       validationResults.dataQuality.hasClientCompany + 
+                       validationResults.dataQuality.hasAddress + 
+                       validationResults.dataQuality.hasPhone + 
+                       validationResults.dataQuality.hasSalesPerson + 
+                       validationResults.dataQuality.hasSalesStage,
           completionRate: data.length > 0 ? 
-            Math.round(((validationResults.dataQuality.hasName + 
-                        validationResults.dataQuality.hasEmail + 
-                        validationResults.dataQuality.hasPosition + 
-                        validationResults.dataQuality.hasLocation + 
-                        validationResults.dataQuality.hasPhone) / (data.length * 5)) * 100) : 0
+            Math.round(((validationResults.dataQuality.hasDepartment + 
+                        validationResults.dataQuality.hasHospitalName + 
+                        validationResults.dataQuality.hasClientCompany + 
+                        validationResults.dataQuality.hasAddress + 
+                        validationResults.dataQuality.hasPhone + 
+                        validationResults.dataQuality.hasSalesPerson + 
+                        validationResults.dataQuality.hasSalesStage) / (data.length * 7)) * 100) : 0
         }
       }
     })

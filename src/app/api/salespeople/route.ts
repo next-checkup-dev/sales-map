@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { 
-  readSalesPeopleData, 
-  writeSalesPersonData, 
-  updateSalesPersonData, 
+  readHospitalSalesData, 
+  writeHospitalSalesData, 
+  updateHospitalSalesData, 
   deleteSalesPersonData,
-  type SalesPersonData 
+  type HospitalSalesData 
 } from '@/lib/googleSheets'
 
 export const dynamic = 'force-dynamic'
 
-// GET: 영업사원 데이터 읽기
+// GET: 병원 영업 데이터 읽기
 export async function GET() {
   try {
-    const data = await readSalesPeopleData()
+    const data = await readHospitalSalesData()
     return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error('API 오류 (GET):', error)
@@ -23,19 +23,19 @@ export async function GET() {
   }
 }
 
-// POST: 새로운 영업사원 추가
+// POST: 새로운 병원 영업 데이터 추가
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const salesPersonData: SalesPersonData = body
+    const hospitalSalesData: HospitalSalesData = body
 
-    const success = await writeSalesPersonData(salesPersonData)
+    const success = await writeHospitalSalesData(hospitalSalesData)
     
     if (success) {
-      return NextResponse.json({ success: true, message: '영업사원이 추가되었습니다.' })
+      return NextResponse.json({ success: true, message: '병원 영업 데이터가 추가되었습니다.' })
     } else {
       return NextResponse.json(
-        { success: false, error: '영업사원 추가에 실패했습니다.' },
+        { success: false, error: '병원 영업 데이터 추가에 실패했습니다.' },
         { status: 500 }
       )
     }
@@ -48,19 +48,19 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT: 영업사원 데이터 업데이트
+// PUT: 병원 영업 데이터 업데이트
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const salesPersonData: SalesPersonData = body
+    const hospitalSalesData: HospitalSalesData = body
 
-    const success = await updateSalesPersonData(salesPersonData)
+    const success = await updateHospitalSalesData(hospitalSalesData)
     
     if (success) {
-      return NextResponse.json({ success: true, message: '영업사원 정보가 업데이트되었습니다.' })
+      return NextResponse.json({ success: true, message: '병원 영업 데이터가 업데이트되었습니다.' })
     } else {
       return NextResponse.json(
-        { success: false, error: '영업사원 업데이트에 실패했습니다.' },
+        { success: false, error: '병원 영업 데이터 업데이트에 실패했습니다.' },
         { status: 500 }
       )
     }

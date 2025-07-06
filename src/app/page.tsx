@@ -33,7 +33,6 @@ import {
 } from '@mui/material'
 import {
   Map as MapIcon,
-  Person as PersonIcon,
   Business as BusinessIcon,
   Login as LoginIcon,
   Logout as LogoutIcon,
@@ -42,26 +41,26 @@ import {
   Search as SearchIcon,
   Home as HomeIcon,
   LocationOn as LocationIcon,
-  People as PeopleIcon,
   BarChart as ChartIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  LocalHospital as LocalHospitalIcon,
 } from '@mui/icons-material'
 import { useAuth } from '@/hooks/useAuth'
 import { useGoogleSheets } from '@/hooks/useGoogleSheets'
 import LoginModal from '@/components/LoginModal'
-import SalesPersonModal from '@/components/SalesPersonModal'
+import HospitalSalesModal from '@/components/HospitalSalesModal'
 import ConnectionTestModal from '@/components/ConnectionTestModal'
-import type { SalesPersonData } from '@/lib/googleSheets'
+import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export default function Home() {
   const [currentTab, setCurrentTab] = useState(0)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
-  const [salesPersonModalOpen, setSalesPersonModalOpen] = useState(false)
+  const [hospitalSalesModalOpen, setHospitalSalesModalOpen] = useState(false)
   const [connectionTestModalOpen, setConnectionTestModalOpen] = useState(false)
-  const [editingSalesPerson, setEditingSalesPerson] = useState<SalesPersonData | null>(null)
+  const [editingHospitalSales, setEditingHospitalSales] = useState<HospitalSalesData | null>(null)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [searchTerm, setSearchTerm] = useState('')
   const [snackbar, setSnackbar] = useState<{
@@ -72,34 +71,34 @@ export default function Home() {
 
   const { user, loading, logout } = useAuth()
   const { 
-    salesPeople, 
+    hospitalSales, 
     loading: sheetsLoading, 
     error: sheetsError,
     fetchData,
-    addSalesPerson,
-    updateSalesPerson,
-    deleteSalesPerson 
+    addHospitalSales,
+    updateHospitalSales,
+    deleteHospitalSales 
   } = useGoogleSheets()
 
   const handleLogout = async () => {
     await logout()
   }
 
-  const handleAddSalesPerson = () => {
+  const handleAddHospitalSales = () => {
     setModalMode('add')
-    setEditingSalesPerson(null)
-    setSalesPersonModalOpen(true)
+    setEditingHospitalSales(null)
+    setHospitalSalesModalOpen(true)
   }
 
-  const handleEditSalesPerson = (salesPerson: SalesPersonData) => {
+  const handleEditHospitalSales = (hospitalSales: HospitalSalesData) => {
     setModalMode('edit')
-    setEditingSalesPerson(salesPerson)
-    setSalesPersonModalOpen(true)
+    setEditingHospitalSales(hospitalSales)
+    setHospitalSalesModalOpen(true)
   }
 
-  const handleDeleteSalesPerson = async (id: string) => {
-    if (window.confirm('정말로 이 영업사원을 삭제하시겠습니까?')) {
-      const result = await deleteSalesPerson(id)
+  const handleDeleteHospitalSales = async (id: string) => {
+    if (window.confirm('정말로 이 병원 영업 데이터를 삭제하시겠습니까?')) {
+      const result = await deleteHospitalSales(id)
       setSnackbar({
         open: true,
         message: result.success ? result.message! : result.error!,
@@ -108,14 +107,14 @@ export default function Home() {
     }
   }
 
-  const handleSaveSalesPerson = async (data: Omit<SalesPersonData, 'id'>) => {
+  const handleSaveHospitalSales = async (data: Omit<HospitalSalesData, 'id'>) => {
     if (modalMode === 'add') {
-      return await addSalesPerson(data)
+      return await addHospitalSales(data)
     } else {
-      if (editingSalesPerson) {
-        return await updateSalesPerson({ ...editingSalesPerson, ...data })
+      if (editingHospitalSales) {
+        return await updateHospitalSales({ ...editingHospitalSales, ...data })
       }
-      return { success: false, error: '편집할 영업사원 정보가 없습니다.' }
+      return { success: false, error: '편집할 병원 영업 데이터가 없습니다.' }
     }
   }
 
@@ -141,17 +140,18 @@ export default function Home() {
     }
   }
 
-  const filteredSalesPeople = salesPeople.filter(person =>
-    person.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    person.location.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredHospitalSales = hospitalSales.filter(hospital =>
+    hospital.hospitalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    hospital.salesPerson.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const speedDialActions = [
     { 
       icon: <AddIcon />, 
-      name: '새 영업사원', 
-      action: handleAddSalesPerson 
+      name: '새 병원 추가', 
+      action: handleAddHospitalSales 
     },
     { 
       icon: <RefreshIcon />, 
@@ -178,20 +178,20 @@ export default function Home() {
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="primary">
-              {sheetsLoading ? <CircularProgress size={24} /> : salesPeople.length}
+              {sheetsLoading ? <CircularProgress size={24} /> : hospitalSales.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              총 영업사원
+              총 병원
             </Typography>
           </Card>
         </Grid>
         <Grid item xs={6}>
           <Card sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h4" color="success.main">
-              {sheetsLoading ? <CircularProgress size={24} /> : salesPeople.filter(p => p.status === '활성').length}
+              {sheetsLoading ? <CircularProgress size={24} /> : hospitalSales.filter(h => h.visitCount > 0).length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              활성 사원
+              방문 병원
             </Typography>
           </Card>
         </Grid>
@@ -210,32 +210,32 @@ export default function Home() {
             </Box>
           ) : (
             <List>
-              {salesPeople.slice(0, 3).map((person, index) => (
-                <Box key={person.id}>
+              {hospitalSales.slice(0, 3).map((hospital, index) => (
+                <Box key={hospital.id}>
                   <ListItem alignItems="flex-start">
                     <ListItemAvatar>
                       <Avatar>
-                        <PersonIcon />
+                        <LocalHospitalIcon />
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
-                      primary={person.name}
+                      primary={hospital.hospitalName}
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.primary">
-                            {person.position} • {person.location}
+                            {hospital.department} • {hospital.address}
                           </Typography>
                           <Chip
-                            label={person.status}
+                            label={`방문 ${hospital.visitCount}회`}
                             size="small"
-                            color={person.status === '활성' ? 'success' : 'default'}
+                            color={hospital.visitCount > 0 ? 'success' : 'default'}
                             sx={{ mt: 0.5 }}
                           />
                         </Box>
                       }
                     />
                   </ListItem>
-                  {index < Math.min(2, salesPeople.length - 1) && <Divider variant="inset" component="li" />}
+                  {index < Math.min(2, hospitalSales.length - 1) && <Divider variant="inset" component="li" />}
                 </Box>
               ))}
             </List>
@@ -249,7 +249,7 @@ export default function Home() {
     <Box sx={{ pb: 7, height: 'calc(100vh - 120px)' }}>
       <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">영업사원 위치</Typography>
+          <Typography variant="h6">병원 위치</Typography>
         </Box>
         <Box
           sx={{
@@ -266,7 +266,7 @@ export default function Home() {
               카카오맵이 여기에 표시됩니다
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {salesPeople.length}명의 영업사원 위치 정보
+              {hospitalSales.length}개의 병원 위치 정보
             </Typography>
           </Box>
         </Box>
@@ -274,14 +274,14 @@ export default function Home() {
     </Box>
   )
 
-  const renderSalesPeopleTab = () => (
+  const renderHospitalSalesTab = () => (
     <Box sx={{ pb: 7 }}>
       {/* 검색 */}
       <Box sx={{ p: 2, pb: 1 }}>
         <TextField
           fullWidth
           size="small"
-          placeholder="영업사원 검색..."
+          placeholder="병원 검색..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{
@@ -296,39 +296,39 @@ export default function Home() {
         </Alert>
       )}
 
-      {/* 영업사원 리스트 */}
+      {/* 병원 리스트 */}
       {sheetsLoading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
           <CircularProgress />
         </Box>
       ) : (
         <List>
-          {filteredSalesPeople.map((person, index) => (
-            <Box key={person.id}>
+          {filteredHospitalSales.map((hospital, index) => (
+            <Box key={hospital.id}>
               <ListItem alignItems="flex-start" sx={{ px: 2 }}>
                 <ListItemAvatar>
                   <Avatar>
-                    <PersonIcon />
+                    <LocalHospitalIcon />
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography variant="subtitle1">{person.name}</Typography>
+                      <Typography variant="subtitle1">{hospital.hospitalName}</Typography>
                       <Chip
-                        label={person.status}
+                        label={`방문 ${hospital.visitCount}회`}
                         size="small"
-                        color={person.status === '활성' ? 'success' : 'default'}
+                        color={hospital.visitCount > 0 ? 'success' : 'default'}
                       />
                     </Box>
                   }
                   secondary={
                     <Box>
                       <Typography variant="body2" color="text.primary">
-                        {person.position} • {person.location}
+                        {hospital.department} • {hospital.address}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {person.phone}
+                        {hospital.phone} • 담당: {hospital.salesPerson}
                       </Typography>
                     </Box>
                   }
@@ -336,20 +336,20 @@ export default function Home() {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <IconButton 
                     size="small" 
-                    onClick={() => handleEditSalesPerson(person)}
+                    onClick={() => handleEditHospitalSales(hospital)}
                   >
                     <EditIcon />
                   </IconButton>
                   <IconButton 
                     size="small" 
                     color="error"
-                    onClick={() => handleDeleteSalesPerson(person.id)}
+                    onClick={() => handleDeleteHospitalSales(hospital.id)}
                   >
                     <DeleteIcon />
                   </IconButton>
                 </Box>
               </ListItem>
-              {index < filteredSalesPeople.length - 1 && <Divider />}
+              {index < filteredHospitalSales.length - 1 && <Divider />}
             </Box>
           ))}
         </List>
@@ -362,23 +362,23 @@ export default function Home() {
       <Card sx={{ m: 2 }}>
         <CardContent>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            영업 현황
+            병원 영업 현황
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="primary">
-                  {sheetsLoading ? <CircularProgress size={32} /> : salesPeople.length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : hospitalSales.length}
                 </Typography>
-                <Typography variant="body2">총 영업사원</Typography>
+                <Typography variant="body2">총 병원</Typography>
               </Box>
             </Grid>
             <Grid item xs={6}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h4" color="success.main">
-                  {sheetsLoading ? <CircularProgress size={32} /> : salesPeople.filter(p => p.status === '활성').length}
+                  {sheetsLoading ? <CircularProgress size={32} /> : hospitalSales.filter(h => h.visitCount > 0).length}
                 </Typography>
-                <Typography variant="body2">활성 사원</Typography>
+                <Typography variant="body2">방문 병원</Typography>
               </Box>
             </Grid>
           </Grid>
@@ -451,7 +451,7 @@ export default function Home() {
   const tabs = [
     { label: '홈', icon: <HomeIcon />, content: renderHomeTab },
     { label: '지도', icon: <MapIcon />, content: renderMapTab },
-    { label: '영업사원', icon: <PeopleIcon />, content: renderSalesPeopleTab },
+    { label: '병원', icon: <LocalHospitalIcon />, content: renderHospitalSalesTab },
     { label: '현황', icon: <ChartIcon />, content: renderAnalyticsTab },
     { label: '설정', icon: <SettingsIcon />, content: renderSettingsTab },
   ]
@@ -482,10 +482,10 @@ export default function Home() {
         p: 3
       }}>
         <Typography variant="h4" sx={{ mb: 2, textAlign: 'center' }}>
-          영업사원 관리 시스템
+          병원 영업 관리 시스템
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4, textAlign: 'center' }}>
-          영업사원 지도 및 현황을 관리하세요
+          병원 영업 현황을 관리하세요
         </Typography>
         <Button 
           variant="contained" 
@@ -510,7 +510,7 @@ export default function Home() {
       <AppBar position="static" elevation={0}>
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            영업사원 관리
+            병원 영업 관리
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
             {user.email}
@@ -565,12 +565,12 @@ export default function Home() {
         ))}
       </SpeedDial>
 
-      {/* 영업사원 모달 */}
-      <SalesPersonModal
-        open={salesPersonModalOpen}
-        onClose={() => setSalesPersonModalOpen(false)}
-        salesPerson={editingSalesPerson}
-        onSave={handleSaveSalesPerson}
+      {/* 병원 영업 모달 */}
+      <HospitalSalesModal
+        open={hospitalSalesModalOpen}
+        onClose={() => setHospitalSalesModalOpen(false)}
+        hospitalSales={editingHospitalSales}
+        onSave={handleSaveHospitalSales}
         mode={modalMode}
       />
 

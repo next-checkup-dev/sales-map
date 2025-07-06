@@ -22,11 +22,11 @@ import {
 import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
-  Person as PersonIcon,
   Schedule as ScheduleIcon,
   Storage as StorageIcon,
+  LocalHospital as LocalHospitalIcon,
 } from '@mui/icons-material'
-import type { SalesPersonData } from '@/lib/googleSheets'
+import type { HospitalSalesData } from '@/lib/googleSheets'
 
 interface ConnectionTestResult {
   success: boolean
@@ -34,7 +34,7 @@ interface ConnectionTestResult {
   data?: {
     totalRecords: number
     responseTime: string
-    sampleData: SalesPersonData[]
+    sampleData: HospitalSalesData[]
     connectionStatus: string
     timestamp: string
     validation: {
@@ -43,12 +43,14 @@ interface ConnectionTestResult {
       invalidRecords: number
       missingFields: string[]
       dataQuality: {
-        hasName: number
-        hasEmail: number
-        hasPosition: number
-        hasLocation: number
+        hasDepartment: number
+        hasHospitalName: number
+        hasClientCompany: number
+        hasAddress: number
         hasPhone: number
-        hasCoordinates: number
+        hasSalesPerson: number
+        hasVisitCount: number
+        hasSalesStage: number
       }
     }
     dataSummary: {
@@ -201,35 +203,35 @@ export default function ConnectionTestModal({
                        </Typography>
                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Typography variant="body2">이름</Typography>
+                           <Typography variant="body2">진료과</Typography>
                            <Chip 
-                             label={`${result.data.validation.dataQuality.hasName}/${result.data.totalRecords}`}
+                             label={`${result.data.validation.dataQuality.hasDepartment}/${result.data.totalRecords}`}
                              size="small"
-                             color={result.data.validation.dataQuality.hasName === result.data.totalRecords ? 'success' : 'warning'}
+                             color={result.data.validation.dataQuality.hasDepartment === result.data.totalRecords ? 'success' : 'warning'}
                            />
                          </Box>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Typography variant="body2">이메일</Typography>
+                           <Typography variant="body2">의원명</Typography>
                            <Chip 
-                             label={`${result.data.validation.dataQuality.hasEmail}/${result.data.totalRecords}`}
+                             label={`${result.data.validation.dataQuality.hasHospitalName}/${result.data.totalRecords}`}
                              size="small"
-                             color={result.data.validation.dataQuality.hasEmail === result.data.totalRecords ? 'success' : 'warning'}
+                             color={result.data.validation.dataQuality.hasHospitalName === result.data.totalRecords ? 'success' : 'warning'}
                            />
                          </Box>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Typography variant="body2">직책</Typography>
+                           <Typography variant="body2">수탁사</Typography>
                            <Chip 
-                             label={`${result.data.validation.dataQuality.hasPosition}/${result.data.totalRecords}`}
+                             label={`${result.data.validation.dataQuality.hasClientCompany}/${result.data.totalRecords}`}
                              size="small"
-                             color={result.data.validation.dataQuality.hasPosition === result.data.totalRecords ? 'success' : 'warning'}
+                             color={result.data.validation.dataQuality.hasClientCompany === result.data.totalRecords ? 'success' : 'warning'}
                            />
                          </Box>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Typography variant="body2">위치</Typography>
+                           <Typography variant="body2">주소</Typography>
                            <Chip 
-                             label={`${result.data.validation.dataQuality.hasLocation}/${result.data.totalRecords}`}
+                             label={`${result.data.validation.dataQuality.hasAddress}/${result.data.totalRecords}`}
                              size="small"
-                             color={result.data.validation.dataQuality.hasLocation === result.data.totalRecords ? 'success' : 'warning'}
+                             color={result.data.validation.dataQuality.hasAddress === result.data.totalRecords ? 'success' : 'warning'}
                            />
                          </Box>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -241,11 +243,11 @@ export default function ConnectionTestModal({
                            />
                          </Box>
                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                           <Typography variant="body2">좌표</Typography>
+                           <Typography variant="body2">영업담당자</Typography>
                            <Chip 
-                             label={`${result.data.validation.dataQuality.hasCoordinates}/${result.data.totalRecords}`}
+                             label={`${result.data.validation.dataQuality.hasSalesPerson}/${result.data.totalRecords}`}
                              size="small"
-                             color={result.data.validation.dataQuality.hasCoordinates === result.data.totalRecords ? 'success' : 'info'}
+                             color={result.data.validation.dataQuality.hasSalesPerson === result.data.totalRecords ? 'success' : 'warning'}
                            />
                          </Box>
                        </Box>
@@ -268,35 +270,35 @@ export default function ConnectionTestModal({
                          실제 Google Sheets 데이터 ({result.data?.sampleData.length}개)
                        </Typography>
                       <List>
-                                                 {result.data?.sampleData?.map((person, index) => (
-                          <Box key={person.id || index}>
+                        {result.data?.sampleData?.map((hospital, index) => (
+                          <Box key={hospital.id || index}>
                             <ListItem alignItems="flex-start">
                               <ListItemAvatar>
                                 <Avatar>
-                                  <PersonIcon />
+                                  <LocalHospitalIcon />
                                 </Avatar>
                               </ListItemAvatar>
                               <ListItemText
-                                primary={person.name || '이름 없음'}
+                                primary={hospital.hospitalName || '병원명 없음'}
                                 secondary={
                                   <Box>
                                     <Typography variant="body2" color="text.primary">
-                                      {person.position || '직책 없음'} • {person.location || '위치 없음'}
+                                      {hospital.department || '진료과 없음'} • {hospital.address || '주소 없음'}
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary">
-                                      {person.email || '이메일 없음'}
+                                      {hospital.phone || '전화번호 없음'} • 담당: {hospital.salesPerson || '담당자 없음'}
                                     </Typography>
                                     <Chip
-                                      label={person.status || '상태 없음'}
+                                      label={`방문 ${hospital.visitCount}회`}
                                       size="small"
-                                      color={person.status === '활성' ? 'success' : 'default'}
+                                      color={hospital.visitCount > 0 ? 'success' : 'default'}
                                       sx={{ mt: 0.5 }}
                                     />
                                   </Box>
                                 }
                               />
                             </ListItem>
-                                                         {index < (result.data?.sampleData?.length || 0) - 1 && <Divider />}
+                            {index < (result.data?.sampleData?.length || 0) - 1 && <Divider />}
                           </Box>
                         ))}
                       </List>
