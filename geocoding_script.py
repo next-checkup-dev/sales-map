@@ -191,19 +191,24 @@ def main():
     
     print(f"총 {len(existing_data)}행의 데이터를 처리합니다.")
     
-    # 각 행을 개별적으로 처리하여 E, F열에 바로 입력
+    # 위도, 경도 데이터 수집
+    coordinates_data = []
+    
     for i, row in enumerate(existing_data, 1):
         if i < START_ROW:
             # 헤더 행은 건너뛰기
+            coordinates_data.append(["", ""])
             continue
             
         if len(row) < 4:
             # D열(주소)이 없는 경우
+            coordinates_data.append(["", ""])
             continue
             
         address = row[3]  # D열의 주소
         
         if not address or address.strip() == "":
+            coordinates_data.append(["", ""])
             continue
             
         print(f"처리 중: {i}행 - {address}")
@@ -213,18 +218,20 @@ def main():
         
         if coordinates:
             latitude, longitude = coordinates
-            # E, F열에 바로 입력
-            coordinates_range = f"{SHEET_NAME}!E{i}:F{i}"
-            sheets_updater.update_sheet_data(SPREADSHEET_ID, coordinates_range, [[latitude, longitude]])
+            coordinates_data.append([latitude, longitude])
             print(f"  → 위도: {latitude}, 경도: {longitude}")
         else:
             # 변환 실패 시 E열에 '변환실패' 입력
-            fail_range = f"{SHEET_NAME}!E{i}"
-            sheets_updater.update_sheet_data(SPREADSHEET_ID, fail_range, [["변환실패"]])
+            coordinates_data.append(["변환실패", ""])
             print(f"  → 변환 실패")
         
         # API 호출 제한을 위한 대기
         time.sleep(0.1)
+    
+    # 모든 데이터 수집 완료 후 E, F열에 한 번에 입력
+    print("모든 주소 변환 완료. 구글 시트에 데이터를 입력합니다...")
+    coordinates_range = f"{SHEET_NAME}!E:F"
+    sheets_updater.update_sheet_data(SPREADSHEET_ID, coordinates_range, coordinates_data)
     
     print("모든 작업이 완료되었습니다!")
 
