@@ -1,5 +1,20 @@
 import { NextResponse } from 'next/server'
 import { readHospitalSalesData, type HospitalSalesData } from '@/lib/googleSheets'
+import { google } from 'googleapis'
+
+// Google Sheets API 설정
+const SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+const SPREADSHEET_ID = '12pcRCN5bqqupjtVi06O3iW6VG8Q1Xr9qWV51ORUMyIA'
+
+// Google Sheets API 클라이언트 생성
+function getGoogleSheetsClient() {
+  const auth = new google.auth.GoogleAuth({
+    scopes: SCOPES,
+    keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  })
+
+  return google.sheets({ version: 'v4', auth })
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +22,14 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const startTime = Date.now()
+    
+    // 헤더 정보 가져오기
+    const sheets = getGoogleSheetsClient()
+    const headerResponse = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'A1:Z1',
+    })
+    const headers = headerResponse.data.values?.[0] || []
     
     // 데이터 읽기 테스트
     const data = await readHospitalSalesData()
@@ -104,6 +127,7 @@ export async function GET() {
       data: {
         totalRecords: data.length,
         responseTime: `${responseTime}ms`,
+        headers: headers, // 헤더 정보 추가
         sampleData: data.slice(0, 5), // 처음 5개 레코드만 샘플로 반환
         connectionStatus: 'connected',
         timestamp: new Date().toISOString(),
@@ -125,6 +149,17 @@ export async function GET() {
                         validationResults.dataQuality.hasPhone + 
                         validationResults.dataQuality.hasSalesPerson + 
                         validationResults.dataQuality.hasSalesStage) / (data.length * 7)) * 100) : 0
+        },
+        // 매핑 정보 추가
+        mappingInfo: {
+          expectedHeaders: [
+            'ID', '진료과', '의원명', '수탁사', '주소', '전화번호', '영업담당자', 
+            '방문횟수', '최초방문일자', '최종방문일자', '반응', '세일즈 단계', 'Next Step',
+            '1차 방문', '1차 방문 내용', '2차 방문', '2차 방문 내용', '3차 방문', '3차 방문 내용',
+            '4차 방문', '4차 방문 내용', '5차 방문', '5차 방문 내용', '6차 방문', '6차 방문 내용', '최종 업데이트'
+          ],
+          actualHeaders: headers,
+          mappingStatus: headers.length >= 26 ? 'complete' : 'incomplete'
         }
       }
     })

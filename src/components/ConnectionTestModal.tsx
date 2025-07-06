@@ -34,6 +34,7 @@ interface ConnectionTestResult {
   data?: {
     totalRecords: number
     responseTime: string
+    headers?: string[] // 헤더 정보 추가
     sampleData: HospitalSalesData[]
     connectionStatus: string
     timestamp: string
@@ -57,6 +58,11 @@ interface ConnectionTestResult {
       totalFields: number
       filledFields: number
       completionRate: number
+    }
+    mappingInfo?: {
+      expectedHeaders: string[]
+      actualHeaders: string[]
+      mappingStatus: string
     }
   }
   details?: {
@@ -151,7 +157,99 @@ export default function ConnectionTestModal({
 
               {result.success && result.data && (
                 <Box>
-                                     {/* 연결 상태 */}
+                                     {/* 헤더 정보 */}
+                   {result.data.headers && (
+                     <Box sx={{ mb: 3 }}>
+                       <Typography variant="h6" sx={{ mb: 2 }}>
+                         Google Sheets 헤더 구조
+                       </Typography>
+                       <Box sx={{ 
+                         display: 'flex', 
+                         gap: 1, 
+                         flexWrap: 'wrap',
+                         p: 2,
+                         bgcolor: 'grey.50',
+                         borderRadius: 1,
+                         border: 1,
+                         borderColor: 'grey.300'
+                       }}>
+                         {result.data.headers.map((header, index) => (
+                           <Chip
+                             key={index}
+                             label={`${index + 1}. ${header}`}
+                             size="small"
+                             variant="outlined"
+                             color="primary"
+                           />
+                         ))}
+                       </Box>
+                     </Box>
+                   )}
+
+                   {/* 매핑 정보 */}
+                   {result.data.mappingInfo && (
+                     <Box sx={{ mb: 3 }}>
+                       <Typography variant="h6" sx={{ mb: 2 }}>
+                         데이터 매핑 상태
+                       </Typography>
+                       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                         <Chip
+                           label={`매핑 상태: ${result.data.mappingInfo.mappingStatus}`}
+                           color={result.data.mappingInfo.mappingStatus === 'complete' ? 'success' : 'warning'}
+                         />
+                         <Chip
+                           label={`예상 헤더: ${result.data.mappingInfo.expectedHeaders.length}개`}
+                           color="info"
+                         />
+                         <Chip
+                           label={`실제 헤더: ${result.data.mappingInfo.actualHeaders.length}개`}
+                           color="info"
+                         />
+                       </Box>
+                       
+                       {/* 예상 vs 실제 헤더 비교 */}
+                       <Box sx={{ mb: 2 }}>
+                         <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                           예상 헤더 vs 실제 헤더
+                         </Typography>
+                         <Box sx={{ 
+                           display: 'grid', 
+                           gridTemplateColumns: '1fr 1fr', 
+                           gap: 2,
+                           p: 2,
+                           bgcolor: 'grey.50',
+                           borderRadius: 1
+                         }}>
+                           <Box>
+                             <Typography variant="caption" color="text.secondary">
+                               예상 헤더:
+                             </Typography>
+                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
+                               {result.data.mappingInfo.expectedHeaders.map((header, index) => (
+                                 <Typography key={index} variant="caption">
+                                   {index + 1}. {header}
+                                 </Typography>
+                               ))}
+                             </Box>
+                           </Box>
+                           <Box>
+                             <Typography variant="caption" color="text.secondary">
+                               실제 헤더:
+                             </Typography>
+                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
+                               {result.data.mappingInfo.actualHeaders.map((header, index) => (
+                                 <Typography key={index} variant="caption">
+                                   {index + 1}. {header}
+                                 </Typography>
+                               ))}
+                             </Box>
+                           </Box>
+                         </Box>
+                       </Box>
+                     </Box>
+                   )}
+
+                   {/* 연결 상태 */}
                    <Box sx={{ mb: 3 }}>
                      <Typography variant="h6" sx={{ mb: 2 }}>
                        연결 상태
