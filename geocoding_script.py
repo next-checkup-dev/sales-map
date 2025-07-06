@@ -20,7 +20,7 @@ class KakaoGeocoder:
         카카오 지도 API 초기화
         
         Args:
-            api_key (str): 카카오 REST API 키
+            api_key (str): 498e5bb317e1d1d671940222856329b0
         """
         self.api_key = api_key
         self.base_url = "https://dapi.kakao.com/v2/local/search/address.json"
@@ -76,7 +76,7 @@ class GoogleSheetsUpdater:
         구글 시트 업데이터 초기화
         
         Args:
-            credentials_file (str): 구글 서비스 계정 키 파일 경로
+            credentials_file (str): google-service-account-key.json
         """
         self.credentials_file = credentials_file
         self.scope = ['https://www.googleapis.com/auth/spreadsheets']
@@ -100,12 +100,15 @@ class GoogleSheetsUpdater:
         구글 시트에서 데이터 가져오기
         
         Args:
-            spreadsheet_id (str): 스프레드시트 ID
-            range_name (str): 범위 (예: 'Sheet1!A:D')
+            spreadsheet_id (str): 12pcRCN5bqqupjtVi06O3iW6VG8Q1Xr9qWV51ORUMyIA
+            range_name (str): 범위 (예: '시트1!D:F')
             
         Returns:
             list: 시트 데이터
         """
+        if self.service is None:
+            raise Exception("구글 API 서비스가 초기화되지 않았습니다. authenticate() 메서드를 먼저 호출하세요.")
+            
         try:
             result = self.service.spreadsheets().values().get(
                 spreadsheetId=spreadsheet_id,
@@ -126,6 +129,9 @@ class GoogleSheetsUpdater:
             range_name (str): 범위 (예: 'Sheet1!E:F')
             values (list): 업데이트할 데이터
         """
+        if self.service is None:
+            raise Exception("구글 API 서비스가 초기화되지 않았습니다. authenticate() 메서드를 먼저 호출하세요.")
+            
         try:
             body = {
                 'values': values
@@ -144,11 +150,24 @@ class GoogleSheetsUpdater:
             raise
 
 def main():
-    # 설정값
-    KAKAO_API_KEY = "YOUR_KAKAO_REST_API_KEY"  # 카카오 REST API 키를 입력하세요
+    # 설정값 - 실제 값으로 수정하세요!
+    KAKAO_API_KEY = "498e5bb317e1d1d671940222856329b0"  # 카카오 REST API 키를 입력하세요
     GOOGLE_CREDENTIALS_FILE = "google-service-account-key.json"
-    SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"  # 구글 시트 ID를 입력하세요
-    SHEET_NAME = "Sheet1"  # 시트 이름을 입력하세요
+    SPREADSHEET_ID = "12pcRCN5bqqupjtVi06O3iW6VG8Q1Xr9qWV51ORUMyIA"  # 구글 시트 ID를 입력하세요 (URL에서 확인)
+    SHEET_NAME = "시트1"  # 시트 이름을 입력하세요
+    
+    # 설정값 검증
+    if KAKAO_API_KEY == "YOUR_KAKAO_REST_API_KEY":
+        print("오류: 카카오 REST API 키를 설정해주세요!")
+        print("geocoding_script.py 파일의 KAKAO_API_KEY 변수를 수정하세요.")
+        return
+        
+    if SPREADSHEET_ID == "YOUR_SPREADSHEET_ID":
+        print("오류: 구글 시트 ID를 설정해주세요!")
+        print("구글 시트 URL에서 스프레드시트 ID를 복사하여 SPREADSHEET_ID 변수를 수정하세요.")
+        print("예: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit")
+        print("     ↑ 이 부분이 스프레드시트 ID입니다")
+        return
     
     # 시작 행 (헤더 제외)
     START_ROW = 2
@@ -172,24 +191,19 @@ def main():
     
     print(f"총 {len(existing_data)}행의 데이터를 처리합니다.")
     
-    # 위도, 경도 데이터 준비
-    coordinates_data = []
-    
+    # 각 행을 개별적으로 처리하여 E, F열에 바로 입력
     for i, row in enumerate(existing_data, 1):
         if i < START_ROW:
             # 헤더 행은 건너뛰기
-            coordinates_data.append(["", ""])
             continue
             
         if len(row) < 4:
             # D열(주소)이 없는 경우
-            coordinates_data.append(["", ""])
             continue
             
         address = row[3]  # D열의 주소
         
         if not address or address.strip() == "":
-            coordinates_data.append(["", ""])
             continue
             
         print(f"처리 중: {i}행 - {address}")
@@ -199,18 +213,18 @@ def main():
         
         if coordinates:
             latitude, longitude = coordinates
-            coordinates_data.append([latitude, longitude])
+            # E, F열에 바로 입력
+            coordinates_range = f"{SHEET_NAME}!E{i}:F{i}"
+            sheets_updater.update_sheet_data(SPREADSHEET_ID, coordinates_range, [[latitude, longitude]])
             print(f"  → 위도: {latitude}, 경도: {longitude}")
         else:
-            coordinates_data.append(["", ""])
+            # 변환 실패 시 E열에 '변환실패' 입력
+            fail_range = f"{SHEET_NAME}!E{i}"
+            sheets_updater.update_sheet_data(SPREADSHEET_ID, fail_range, [["변환실패"]])
             print(f"  → 변환 실패")
         
         # API 호출 제한을 위한 대기
         time.sleep(0.1)
-    
-    # E, F열에 좌표 데이터 업데이트
-    coordinates_range = f"{SHEET_NAME}!E:F"
-    sheets_updater.update_sheet_data(SPREADSHEET_ID, coordinates_range, coordinates_data)
     
     print("모든 작업이 완료되었습니다!")
 
