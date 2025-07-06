@@ -42,6 +42,8 @@ export interface HospitalSalesData {
   visit6: string // 6차 방문
   visit6Content: string // 6차 방문 내용
   lastUpdate: string // 최종 업데이트
+  lat?: number // 위도 (지도용)
+  lng?: number // 경도 (지도용)
 }
 
 // 헤더 기반 컬럼 인덱스 찾기

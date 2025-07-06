@@ -40,7 +40,7 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Home as HomeIcon,
-  LocationOn as LocationIcon,
+
   BarChart as ChartIcon,
   Settings as SettingsIcon,
   Notifications as NotificationsIcon,
@@ -52,6 +52,7 @@ import LoginModal from '@/components/LoginModal'
 import HospitalSalesModal from '@/components/HospitalSalesModal'
 import ConnectionTestModal from '@/components/ConnectionTestModal'
 import VirtualizedList from '@/components/VirtualizedList'
+import KakaoMap from '@/components/KakaoMap'
 import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export default function Home() {
@@ -62,6 +63,7 @@ export default function Home() {
   const [editingHospitalSales, setEditingHospitalSales] = useState<HospitalSalesData | null>(null)
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add')
   const [searchTerm, setSearchTerm] = useState('')
+
   const [snackbar, setSnackbar] = useState<{
     open: boolean
     message: string
@@ -82,11 +84,18 @@ export default function Home() {
   // 탭 변경 시 데이터 로딩 최적화
   const handleTabChange = useCallback((event: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue)
-    // 병원 탭이나 현황 탭으로 이동할 때만 데이터 새로고침
-    if (newValue === 2 || newValue === 3) {
+    // 병원 탭, 현황 탭, 지도 탭으로 이동할 때만 데이터 새로고침
+    if (newValue === 2 || newValue === 3 || newValue === 4) {
       fetchData(false)
     }
   }, [fetchData])
+
+  // 지도 마커 클릭 핸들러
+  const handleMapMarkerClick = useCallback((hospital: HospitalSalesData) => {
+    setEditingHospitalSales(hospital)
+    setModalMode('edit')
+    setHospitalSalesModalOpen(true)
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -253,34 +262,30 @@ export default function Home() {
     </Box>
   )
 
-  const renderMapTab = () => (
-    <Box sx={{ pb: 7, height: 'calc(100vh - 120px)' }}>
-      <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h6">병원 위치</Typography>
-        </Box>
-        <Box
-          sx={{
-            flexGrow: 1,
-            bgcolor: 'grey.100',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Box sx={{ textAlign: 'center' }}>
-            <LocationIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="body1" color="text.secondary">
-              카카오맵이 여기에 표시됩니다
-            </Typography>
+  const renderMapTab = () => {
+    // 서울특별시로 시작하는 병원만 필터링
+    const seoulHospitals = hospitalSales.filter(h => h.address?.startsWith('서울특별시'));
+
+    return (
+      <Box sx={{ pb: 7, height: 'calc(100vh - 120px)' }}>
+        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+            <Typography variant="h6">🗺️ 서울특별시 병원 지도</Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              {hospitalSales.length}개의 병원 위치 정보
+              주소가 &apos;서울특별시&apos;로 시작하는 병원만 지도에 표시됩니다. ({seoulHospitals.length}개)
             </Typography>
           </Box>
-        </Box>
-      </Paper>
-    </Box>
-  )
+          <Box sx={{ flexGrow: 1, position: 'relative' }}>
+            <KakaoMap
+              hospitals={seoulHospitals}
+              loading={sheetsLoading}
+              onMarkerClick={handleMapMarkerClick}
+            />
+          </Box>
+        </Paper>
+      </Box>
+    );
+  };
 
   const renderHospitalSalesTab = () => (
     <Box sx={{ pb: 7 }}>
