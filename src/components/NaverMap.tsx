@@ -22,7 +22,7 @@ declare global {
       maps: {
         Map: new (element: HTMLElement, options: unknown) => unknown
         LatLng: new (lat: number, lng: number) => unknown
-        Marker: new (options: unknown) => unknown
+        Marker: new (options: Record<string, unknown>) => unknown
         Size: new (width: number, height: number) => unknown
         Point: new (x: number, y: number) => unknown
         InfoWindow: new (options: unknown) => {
@@ -267,6 +267,16 @@ export default function NaverMap({
     
     markers.forEach((markerData) => {
       try {
+        // 유효한 좌표인지 확인
+        if (!markerData.position || 
+            typeof markerData.position.lat !== 'number' || 
+            typeof markerData.position.lng !== 'number' ||
+            isNaN(markerData.position.lat) || 
+            isNaN(markerData.position.lng)) {
+          console.warn('유효하지 않은 좌표:', markerData)
+          return
+        }
+
         const position = new window.naver.maps.LatLng(
           markerData.position.lat,
           markerData.position.lng
@@ -287,17 +297,20 @@ export default function NaverMap({
           ctx.stroke()
         }
 
-        const marker = new window.naver.maps.Marker({
+        // 마커 옵션 객체 생성
+        const markerOptions = {
           position,
           map: mapInstanceRef.current,
-          title: markerData.title,
+          title: markerData.title || '',
           icon: {
             content: canvas.toDataURL(),
             size: new window.naver.maps.Size(30, 30),
             anchor: new window.naver.maps.Point(15, 15)
           },
-          cursor: 'pointer'
-        })
+          clickable: true
+        }
+
+        const marker = new window.naver.maps.Marker(markerOptions)
         
         // 인포윈도우 생성
         const infowindow = new window.naver.maps.InfoWindow({
