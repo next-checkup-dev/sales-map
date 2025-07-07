@@ -51,7 +51,7 @@ import LoginModal from '@/components/LoginModal'
 import HospitalSalesModal from '@/components/HospitalSalesModal'
 import ConnectionTestModal from '@/components/ConnectionTestModal'
 import VirtualizedList from '@/components/VirtualizedList'
-import KakaoMap from '@/components/KakaoMap'
+import NaverMap from '@/components/NaverMap'
 import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export default function Home() {
@@ -275,7 +275,7 @@ export default function Home() {
   const renderMapTab = () => {
     return (
       <Box sx={{ pb: 7, height: 'calc(100vh - 120px)' }}>
-        <KakaoMap 
+        <NaverMap 
           hospitals={seoulHospitalSales}
           loading={sheetsLoading}
           onMarkerClick={handleMapMarkerClick}

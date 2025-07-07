@@ -13,6 +13,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^5.17.1",
     "@mui/material": "^5.17.1",
+    "@types/navermaps": "^3.9.1",
     "firebase": "^11.10.0",
     "googleapis": "^150.0.1",
     "next": "15.3.5",

@@ -354,9 +354,11 @@ export default function ConnectionTestModal({
                      {/* 누락된 필드 */}
                      {result.data.validation.missingFields.length > 0 && (
                        <Alert severity="warning" sx={{ mt: 2 }}>
-                         <Typography variant="body2">
-                           누락된 필드: {result.data.validation.missingFields.join(', ')}
-                         </Typography>
+                         <Box>
+                           <Typography variant="body2">
+                             누락된 필드: {result.data.validation.missingFields.join(', ')}
+                           </Typography>
+                         </Box>
                        </Alert>
                      )}
                    </Box>

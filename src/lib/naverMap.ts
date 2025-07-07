@@ -1,13 +1,13 @@
 import type { HospitalSalesData } from './googleSheets'
 
-// 카카오맵 API 관련 타입 정의
-export interface KakaoMapConfig {
+// 네이버맵 API 관련 타입 정의
+export interface NaverMapConfig {
   apiKey: string
   center: {
     lat: number
     lng: number
   }
-  level: number
+  zoom: number
 }
 
 export interface HospitalLocation {
@@ -34,35 +34,70 @@ export interface MapMarker {
   department: string
 }
 
-// 카카오맵 API 키 (환경변수에서 가져오기)
-export const KAKAO_MAP_API_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY || ''
+export interface CurrentLocation {
+  lat: number
+  lng: number
+  accuracy?: number
+}
+
+// 네이버맵 API 키 (환경변수에서 가져오기)
+export const NAVER_MAP_API_KEY = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || ''
 
 // 기본 지도 설정
-export const DEFAULT_MAP_CONFIG: KakaoMapConfig = {
-  apiKey: KAKAO_MAP_API_KEY,
+export const DEFAULT_MAP_CONFIG: NaverMapConfig = {
+  apiKey: NAVER_MAP_API_KEY,
   center: {
     lat: 37.5665, // 서울 시청
     lng: 126.9780
   },
-  level: 8
+  zoom: 12
 }
 
-// 주소를 좌표로 변환하는 함수
+// 현재 위치 가져오기
+export function getCurrentLocation(): Promise<CurrentLocation> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('브라우저가 위치 정보를 지원하지 않습니다.'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        })
+      },
+      (error) => {
+        reject(new Error(`위치 정보를 가져올 수 없습니다: ${error.message}`))
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
+      }
+    )
+  })
+}
+
+// 주소를 좌표로 변환하는 함수 (네이버 지오코딩 API 사용)
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
     const response = await fetch(
-      `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(address)}`,
+      `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
       {
         headers: {
-          'Authorization': `KakaoAK ${KAKAO_MAP_API_KEY}`
+          'X-NCP-APIGW-API-KEY-ID': NAVER_MAP_API_KEY,
+          'X-NCP-APIGW-API-KEY': process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_SECRET || ''
         }
       }
     )
 
     const data = await response.json()
     
-    if (data.documents && data.documents.length > 0) {
-      const location = data.documents[0]
+    if (data.addresses && data.addresses.length > 0) {
+      const location = data.addresses[0]
       return {
         lat: parseFloat(location.y),
         lng: parseFloat(location.x)
@@ -103,7 +138,7 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
       <!-- 헤더 -->
       <div style="border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 15px;">
         <h3 style="margin: 0; color: #333; font-size: 18px; font-weight: bold;">
-          🏥 ${hospital.hospitalName || '병원명 없음'}
+          ${hospital.hospitalName || '병원명 없음'}
         </h3>
         <div style="display: flex; align-items: center; margin-top: 5px;">
           <span style="
@@ -184,11 +219,11 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
 
       <!-- 액션 버튼 -->
       <div style="margin-top: 15px; text-align: center;">
-        <a href="https://map.kakao.com/link/map/${encodeURIComponent(hospital.hospitalName || '병원')},${hospital.lat || 0},${hospital.lng || 0}" 
+        <a href="https://map.naver.com/p/search/${encodeURIComponent(hospital.hospitalName || '병원')}" 
            target="_blank" 
            style="
              display: inline-block;
-             background-color: #007bff;
+             background-color: #03C75A;
              color: white;
              text-decoration: none;
              padding: 8px 16px;
@@ -196,13 +231,13 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
              font-size: 12px;
              margin-right: 8px;
            ">
-          🗺️ 큰지도보기
+          🗺️ 네이버지도
         </a>
-        <a href="https://map.kakao.com/link/to/${encodeURIComponent(hospital.hospitalName || '병원')},${hospital.lat || 0},${hospital.lng || 0}" 
+        <a href="https://map.naver.com/p/dir/${hospital.lat || 0},${hospital.lng || 0}" 
            target="_blank" 
            style="
              display: inline-block;
-             background-color: #28a745;
+             background-color: #4285F4;
              color: white;
              text-decoration: none;
              padding: 8px 16px;
