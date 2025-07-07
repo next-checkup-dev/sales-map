@@ -21,14 +21,22 @@ export interface HospitalSalesData {
   hospitalName: string // 의원명
   clientCompany: string // 수탁사
   address: string // 주소
+  lat?: number // 위도
+  lng?: number // 경도
   phone: string // 전화번호
-  salesPerson: string // 영업담당자
+  fax: string // 팩스
+  directorName: string // 원장이름
+  contactPerson: string // 담당자명
+  contactPhone: string // 담당자 연락처
+  salesStage: string // 세일즈 단계
+  tendency: string // 성향
+  nextStep: string // Next Step
+  needs: string // 과제(니즈)
   visitCount: number // 방문횟수
+  progress: string // 진행상황
   firstVisitDate: string // 최초방문일자
   lastVisitDate: string // 최종방문일자
-  response: string // 반응
-  salesStage: string // 세일즈 단계
-  nextStep: string // Next Step
+  salesPerson: string // 영업담당자
   visit1: string // 1차 방문
   visit1Content: string // 1차 방문 내용
   visit2: string // 2차 방문
@@ -42,8 +50,6 @@ export interface HospitalSalesData {
   visit6: string // 6차 방문
   visit6Content: string // 6차 방문 내용
   lastUpdate: string // 최종 업데이트
-  lat?: number // 위도 (지도용)
-  lng?: number // 경도 (지도용)
 }
 
 // 헤더 기반 컬럼 인덱스 찾기
@@ -77,28 +83,34 @@ export async function readHospitalSalesData(): Promise<HospitalSalesData[]> {
       clientCompany: findColumnIndex(headers, ['수탁사', '고객사', 'client', 'company']) !== -1 ? findColumnIndex(headers, ['수탁사', '고객사', 'client', 'company']) : 3,
       address: findColumnIndex(headers, ['주소', 'address']) !== -1 ? findColumnIndex(headers, ['주소', 'address']) : 4,
       phone: findColumnIndex(headers, ['전화번호', '연락처', 'phone', 'tel']) !== -1 ? findColumnIndex(headers, ['전화번호', '연락처', 'phone', 'tel']) : 5,
-      salesPerson: findColumnIndex(headers, ['영업담당자', '담당자', 'sales', 'person']) !== -1 ? findColumnIndex(headers, ['영업담당자', '담당자', 'sales', 'person']) : 6,
-      visitCount: findColumnIndex(headers, ['방문횟수', '방문', 'visit', 'count']) !== -1 ? findColumnIndex(headers, ['방문횟수', '방문', 'visit', 'count']) : 7,
-      firstVisitDate: findColumnIndex(headers, ['최초방문일자', '첫방문', 'first', 'visit']) !== -1 ? findColumnIndex(headers, ['최초방문일자', '첫방문', 'first', 'visit']) : 8,
-      lastVisitDate: findColumnIndex(headers, ['최종방문일자', '마지막방문', 'last', 'visit']) !== -1 ? findColumnIndex(headers, ['최종방문일자', '마지막방문', 'last', 'visit']) : 9,
-      response: findColumnIndex(headers, ['반응', 'response']) !== -1 ? findColumnIndex(headers, ['반응', 'response']) : 10,
-      salesStage: findColumnIndex(headers, ['세일즈 단계', '단계', 'stage']) !== -1 ? findColumnIndex(headers, ['세일즈 단계', '단계', 'stage']) : 11,
+      fax: findColumnIndex(headers, ['팩스', 'fax']) !== -1 ? findColumnIndex(headers, ['팩스', 'fax']) : 6,
+      directorName: findColumnIndex(headers, ['원장이름', '원장', 'director', 'name']) !== -1 ? findColumnIndex(headers, ['원장이름', '원장', 'director', 'name']) : 7,
+      contactPerson: findColumnIndex(headers, ['담당자명', '담당자', 'contact', 'person']) !== -1 ? findColumnIndex(headers, ['담당자명', '담당자', 'contact', 'person']) : 8,
+      contactPhone: findColumnIndex(headers, ['담당자 연락처', '담당자 전화번호', 'contact', 'phone']) !== -1 ? findColumnIndex(headers, ['담당자 연락처', '담당자 전화번호', 'contact', 'phone']) : 9,
+      salesStage: findColumnIndex(headers, ['세일즈 단계', '단계', 'stage']) !== -1 ? findColumnIndex(headers, ['세일즈 단계', '단계', 'stage']) : 10,
+      tendency: findColumnIndex(headers, ['성향', 'tendency']) !== -1 ? findColumnIndex(headers, ['성향', 'tendency']) : 11,
       nextStep: findColumnIndex(headers, ['next step', '다음단계', 'next']) !== -1 ? findColumnIndex(headers, ['next step', '다음단계', 'next']) : 12,
-      visit1: findColumnIndex(headers, ['1차 방문', '1차']) !== -1 ? findColumnIndex(headers, ['1차 방문', '1차']) : 13,
-      visit1Content: findColumnIndex(headers, ['1차 방문 내용', '1차 내용']) !== -1 ? findColumnIndex(headers, ['1차 방문 내용', '1차 내용']) : 14,
-      visit2: findColumnIndex(headers, ['2차 방문', '2차']) !== -1 ? findColumnIndex(headers, ['2차 방문', '2차']) : 15,
-      visit2Content: findColumnIndex(headers, ['2차 방문 내용', '2차 내용']) !== -1 ? findColumnIndex(headers, ['2차 방문 내용', '2차 내용']) : 16,
-      visit3: findColumnIndex(headers, ['3차 방문', '3차']) !== -1 ? findColumnIndex(headers, ['3차 방문', '3차']) : 17,
-      visit3Content: findColumnIndex(headers, ['3차 방문 내용', '3차 내용']) !== -1 ? findColumnIndex(headers, ['3차 방문 내용', '3차 내용']) : 18,
-      visit4: findColumnIndex(headers, ['4차 방문', '4차']) !== -1 ? findColumnIndex(headers, ['4차 방문', '4차']) : 19,
-      visit4Content: findColumnIndex(headers, ['4차 방문 내용', '4차 내용']) !== -1 ? findColumnIndex(headers, ['4차 방문 내용', '4차 내용']) : 20,
-      visit5: findColumnIndex(headers, ['5차 방문', '5차']) !== -1 ? findColumnIndex(headers, ['5차 방문', '5차']) : 21,
-      visit5Content: findColumnIndex(headers, ['5차 방문 내용', '5차 내용']) !== -1 ? findColumnIndex(headers, ['5차 방문 내용', '5차 내용']) : 22,
-      visit6: findColumnIndex(headers, ['6차 방문', '6차']) !== -1 ? findColumnIndex(headers, ['6차 방문', '6차']) : 23,
-      visit6Content: findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) !== -1 ? findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) : 24,
-      lastUpdate: findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) !== -1 ? findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) : 25,
-      lat: findColumnIndex(headers, ['lat', '위도', 'latitude']) !== -1 ? findColumnIndex(headers, ['lat', '위도', 'latitude']) : 26,
-      lng: findColumnIndex(headers, ['lng', '경도', 'longitude']) !== -1 ? findColumnIndex(headers, ['lng', '경도', 'longitude']) : 27,
+      needs: findColumnIndex(headers, ['과제(니즈)', 'needs']) !== -1 ? findColumnIndex(headers, ['과제(니즈)', 'needs']) : 13,
+      visitCount: findColumnIndex(headers, ['방문횟수', '방문', 'visit', 'count']) !== -1 ? findColumnIndex(headers, ['방문횟수', '방문', 'visit', 'count']) : 14,
+      progress: findColumnIndex(headers, ['진행상황', 'progress']) !== -1 ? findColumnIndex(headers, ['진행상황', 'progress']) : 15,
+      firstVisitDate: findColumnIndex(headers, ['최초방문일자', '첫방문', 'first', 'visit']) !== -1 ? findColumnIndex(headers, ['최초방문일자', '첫방문', 'first', 'visit']) : 16,
+      lastVisitDate: findColumnIndex(headers, ['최종방문일자', '마지막방문', 'last', 'visit']) !== -1 ? findColumnIndex(headers, ['최종방문일자', '마지막방문', 'last', 'visit']) : 17,
+      salesPerson: findColumnIndex(headers, ['영업담당자', '담당자', 'sales', 'person']) !== -1 ? findColumnIndex(headers, ['영업담당자', '담당자', 'sales', 'person']) : 18,
+      visit1: findColumnIndex(headers, ['1차 방문', '1차']) !== -1 ? findColumnIndex(headers, ['1차 방문', '1차']) : 19,
+      visit1Content: findColumnIndex(headers, ['1차 방문 내용', '1차 내용']) !== -1 ? findColumnIndex(headers, ['1차 방문 내용', '1차 내용']) : 20,
+      visit2: findColumnIndex(headers, ['2차 방문', '2차']) !== -1 ? findColumnIndex(headers, ['2차 방문', '2차']) : 21,
+      visit2Content: findColumnIndex(headers, ['2차 방문 내용', '2차 내용']) !== -1 ? findColumnIndex(headers, ['2차 방문 내용', '2차 내용']) : 22,
+      visit3: findColumnIndex(headers, ['3차 방문', '3차']) !== -1 ? findColumnIndex(headers, ['3차 방문', '3차']) : 23,
+      visit3Content: findColumnIndex(headers, ['3차 방문 내용', '3차 내용']) !== -1 ? findColumnIndex(headers, ['3차 방문 내용', '3차 내용']) : 24,
+      visit4: findColumnIndex(headers, ['4차 방문', '4차']) !== -1 ? findColumnIndex(headers, ['4차 방문', '4차']) : 25,
+      visit4Content: findColumnIndex(headers, ['4차 방문 내용', '4차 내용']) !== -1 ? findColumnIndex(headers, ['4차 방문 내용', '4차 내용']) : 26,
+      visit5: findColumnIndex(headers, ['5차 방문', '5차']) !== -1 ? findColumnIndex(headers, ['5차 방문', '5차']) : 27,
+      visit5Content: findColumnIndex(headers, ['5차 방문 내용', '5차 내용']) !== -1 ? findColumnIndex(headers, ['5차 방문 내용', '5차 내용']) : 28,
+      visit6: findColumnIndex(headers, ['6차 방문', '6차']) !== -1 ? findColumnIndex(headers, ['6차 방문', '6차']) : 29,
+      visit6Content: findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) !== -1 ? findColumnIndex(headers, ['6차 방문 내용', '6차 내용']) : 30,
+      lastUpdate: findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) !== -1 ? findColumnIndex(headers, ['최종 업데이트', '업데이트', 'update']) : 31,
+      lat: findColumnIndex(headers, ['lat', '위도', 'latitude']) !== -1 ? findColumnIndex(headers, ['lat', '위도', 'latitude']) : 32,
+      lng: findColumnIndex(headers, ['lng', '경도', 'longitude']) !== -1 ? findColumnIndex(headers, ['lng', '경도', 'longitude']) : 33,
     }
     
     console.log('헤더 매핑 결과:', headers)
@@ -131,13 +143,19 @@ export async function readHospitalSalesData(): Promise<HospitalSalesData[]> {
         clientCompany: row[columnMap.clientCompany] || '',
         address: row[columnMap.address] || '',
         phone: row[columnMap.phone] || '',
-        salesPerson: row[columnMap.salesPerson] || '',
+        fax: row[columnMap.fax] || '',
+        directorName: row[columnMap.directorName] || '',
+        contactPerson: row[columnMap.contactPerson] || '',
+        contactPhone: row[columnMap.contactPhone] || '',
+        salesStage: row[columnMap.salesStage] || '',
+        tendency: row[columnMap.tendency] || '',
+        nextStep: row[columnMap.nextStep] || '',
+        needs: row[columnMap.needs] || '',
         visitCount: calculatedVisitInfo.visitCount,
+        progress: row[columnMap.progress] || '',
         firstVisitDate: calculatedVisitInfo.firstVisitDate,
         lastVisitDate: calculatedVisitInfo.lastVisitDate,
-        response: row[columnMap.response] || '',
-        salesStage: row[columnMap.salesStage] || '',
-        nextStep: row[columnMap.nextStep] || '',
+        salesPerson: row[columnMap.salesPerson] || '',
         visit1: visitData.visit1,
         visit1Content: row[columnMap.visit1Content] || '',
         visit2: visitData.visit2,
@@ -174,13 +192,19 @@ export async function writeHospitalSalesData(data: HospitalSalesData): Promise<b
         data.clientCompany,
         data.address,
         data.phone,
-        data.salesPerson,
+        data.fax,
+        data.directorName,
+        data.contactPerson,
+        data.contactPhone,
+        data.salesStage,
+        data.tendency,
+        data.nextStep,
+        data.needs,
         data.visitCount,
+        data.progress,
         data.firstVisitDate,
         data.lastVisitDate,
-        data.response,
-        data.salesStage,
-        data.nextStep,
+        data.salesPerson,
         data.visit1,
         data.visit1Content,
         data.visit2,
@@ -194,6 +218,8 @@ export async function writeHospitalSalesData(data: HospitalSalesData): Promise<b
         data.visit6,
         data.visit6Content,
         data.lastUpdate,
+        data.lat || '',
+        data.lng || '',
       ]
     ]
 
@@ -296,13 +322,19 @@ export async function updateHospitalSalesData(data: HospitalSalesData): Promise<
         updatedData.clientCompany,
         updatedData.address,
         updatedData.phone,
-        updatedData.salesPerson,
+        updatedData.fax,
+        updatedData.directorName,
+        updatedData.contactPerson,
+        updatedData.contactPhone,
+        updatedData.salesStage,
+        updatedData.tendency,
+        updatedData.nextStep,
+        updatedData.needs,
         updatedData.visitCount,
+        updatedData.progress,
         updatedData.firstVisitDate,
         updatedData.lastVisitDate,
-        updatedData.response,
-        updatedData.salesStage,
-        updatedData.nextStep,
+        updatedData.salesPerson,
         updatedData.visit1,
         updatedData.visit1Content,
         updatedData.visit2,

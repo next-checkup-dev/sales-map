@@ -118,7 +118,10 @@ export default function VirtualizedList({
                           {hospital.department} • {hospital.address}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {hospital.phone} • 담당: {hospital.salesPerson}
+                          {hospital.phone} • 담당: {hospital.salesPerson} • {hospital.salesStage}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {hospital.contactPerson && `담당자: ${hospital.contactPerson}`} {hospital.tendency && `• 성향: ${hospital.tendency}`}
                         </Typography>
                       </Box>
                     }

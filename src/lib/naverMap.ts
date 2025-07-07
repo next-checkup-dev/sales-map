@@ -40,7 +40,7 @@ export interface CurrentLocation {
   accuracy?: number
 }
 
-// 네이버맵 API 키 (환경변수에서 가져오기)
+// 네이버맵 API 키 (환경변수에서 가져오기) - 새로운 ncpKeyId 사용
 export const NAVER_MAP_API_KEY = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || ''
 
 // 기본 지도 설정
@@ -81,15 +81,15 @@ export function getCurrentLocation(): Promise<CurrentLocation> {
   })
 }
 
-// 주소를 좌표로 변환하는 함수 (네이버 지오코딩 API 사용)
+// 주소를 좌표로 변환하는 함수 (네이버 지오코딩 API 사용) - 새로운 API 엔드포인트
 export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
   try {
     const response = await fetch(
-      `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
+      `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
       {
         headers: {
-          'X-NCP-APIGW-API-KEY-ID': NAVER_MAP_API_KEY,
-          'X-NCP-APIGW-API-KEY': process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_SECRET || ''
+          'x-ncp-apigw-api-key-id': NAVER_MAP_API_KEY,
+          'x-ncp-apigw-api-key': process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_SECRET || ''
         }
       }
     )
@@ -113,20 +113,39 @@ export async function geocodeAddress(address: string): Promise<{ lat: number; ln
 
 // 병원 데이터를 지도 마커로 변환
 export function convertToMapMarkers(hospitals: HospitalSalesData[]): MapMarker[] {
+  console.log('convertToMapMarkers 호출:', hospitals.length, '개 병원')
+  
   return hospitals
-    .filter(hospital => hospital.address && hospital.address.trim() !== '')
-    .map(hospital => ({
-      id: hospital.id,
-      position: {
-        lat: hospital.lat || 0,
-        lng: hospital.lng || 0
-      },
-      title: hospital.hospitalName || '병원명 없음',
-      content: createInfoWindowContent(hospital),
-      visitCount: hospital.visitCount || 0,
-      salesStage: hospital.salesStage || '',
-      department: hospital.department || '',
-    }))
+    .filter(hospital => {
+      const hasAddress = hospital.address && hospital.address.trim() !== ''
+      const hasValidCoords = hospital.lat && hospital.lng && 
+                            hospital.lat !== 0 && hospital.lng !== 0 &&
+                            !isNaN(hospital.lat) && !isNaN(hospital.lng)
+      
+      if (!hasAddress) {
+        console.log('주소 없는 병원 제외:', hospital.hospitalName)
+      }
+      if (!hasValidCoords) {
+        console.log('유효하지 않은 좌표 제외:', hospital.hospitalName, hospital.lat, hospital.lng)
+      }
+      
+      return hasAddress && hasValidCoords
+    })
+    .map(hospital => {
+      console.log('마커 변환:', hospital.hospitalName, hospital.lat, hospital.lng)
+      return {
+        id: hospital.id,
+        position: {
+          lat: hospital.lat || 0,
+          lng: hospital.lng || 0
+        },
+        title: hospital.hospitalName || '병원명 없음',
+        content: createInfoWindowContent(hospital),
+        visitCount: hospital.visitCount || 0,
+        salesStage: hospital.salesStage || '',
+        department: hospital.department || '',
+      }
+    })
 }
 
 // 인포윈도우 내용 생성 함수
@@ -178,9 +197,33 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
           </span>
         </div>
         <div style="margin-bottom: 8px;">
-          <strong style="color: #555; font-size: 13px;">👤 담당자:</strong>
+          <strong style="color: #555; font-size: 13px;">👤 영업담당자:</strong>
           <span style="color: #333; font-size: 13px; margin-left: 5px;">
             ${hospital.salesPerson || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">👨‍⚕️ 원장이름:</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.directorName || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">📞 담당자명:</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.contactPerson || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">📱 담당자 연락처:</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.contactPhone || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">📠 팩스:</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.fax || '정보 없음'}
           </span>
         </div>
       </div>
@@ -200,9 +243,21 @@ function createInfoWindowContent(hospital: HospitalSalesData): string {
           </span>
         </div>
         <div style="margin-bottom: 8px;">
-          <strong style="color: #555; font-size: 13px;">💬 반응:</strong>
+          <strong style="color: #555; font-size: 13px;">📊 진행상황:</strong>
           <span style="color: #333; font-size: 13px; margin-left: 5px;">
-            ${hospital.response || '정보 없음'}
+            ${hospital.progress || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">💬 성향:</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.tendency || '정보 없음'}
+          </span>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <strong style="color: #555; font-size: 13px;">📋 과제(니즈):</strong>
+          <span style="color: #333; font-size: 13px; margin-left: 5px;">
+            ${hospital.needs || '정보 없음'}
           </span>
         </div>
       </div>

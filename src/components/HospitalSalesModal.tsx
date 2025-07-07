@@ -39,14 +39,22 @@ export default function HospitalSalesModal({
     hospitalName: '',
     clientCompany: '',
     address: '',
+    lat: undefined,
+    lng: undefined,
     phone: '',
-    salesPerson: '',
+    fax: '',
+    directorName: '',
+    contactPerson: '',
+    contactPhone: '',
+    salesStage: '',
+    tendency: '',
+    nextStep: '',
+    needs: '',
     visitCount: 0,
+    progress: '',
     firstVisitDate: '',
     lastVisitDate: '',
-    response: '',
-    salesStage: '',
-    nextStep: '',
+    salesPerson: '',
     visit1: '',
     visit1Content: '',
     visit2: '',
@@ -59,7 +67,7 @@ export default function HospitalSalesModal({
     visit5Content: '',
     visit6: '',
     visit6Content: '',
-    lastUpdate: '',
+    lastUpdate: new Date().toISOString().split('T')[0],
   })
   const [loading, setLoading] = useState(false)
 
@@ -70,14 +78,22 @@ export default function HospitalSalesModal({
         hospitalName: hospitalSales.hospitalName || '',
         clientCompany: hospitalSales.clientCompany || '',
         address: hospitalSales.address || '',
+        lat: hospitalSales.lat,
+        lng: hospitalSales.lng,
         phone: hospitalSales.phone || '',
-        salesPerson: hospitalSales.salesPerson || '',
+        fax: hospitalSales.fax || '',
+        directorName: hospitalSales.directorName || '',
+        contactPerson: hospitalSales.contactPerson || '',
+        contactPhone: hospitalSales.contactPhone || '',
+        salesStage: hospitalSales.salesStage || '',
+        tendency: hospitalSales.tendency || '',
+        nextStep: hospitalSales.nextStep || '',
+        needs: hospitalSales.needs || '',
         visitCount: hospitalSales.visitCount || 0,
+        progress: hospitalSales.progress || '',
         firstVisitDate: hospitalSales.firstVisitDate || '',
         lastVisitDate: hospitalSales.lastVisitDate || '',
-        response: hospitalSales.response || '',
-        salesStage: hospitalSales.salesStage || '',
-        nextStep: hospitalSales.nextStep || '',
+        salesPerson: hospitalSales.salesPerson || '',
         visit1: hospitalSales.visit1 || '',
         visit1Content: hospitalSales.visit1Content || '',
         visit2: hospitalSales.visit2 || '',
@@ -98,14 +114,22 @@ export default function HospitalSalesModal({
         hospitalName: '',
         clientCompany: '',
         address: '',
+        lat: undefined,
+        lng: undefined,
         phone: '',
-        salesPerson: '',
+        fax: '',
+        directorName: '',
+        contactPerson: '',
+        contactPhone: '',
+        salesStage: '',
+        tendency: '',
+        nextStep: '',
+        needs: '',
         visitCount: 0,
+        progress: '',
         firstVisitDate: '',
         lastVisitDate: '',
-        response: '',
-        salesStage: '',
-        nextStep: '',
+        salesPerson: '',
         visit1: '',
         visit1Content: '',
         visit2: '',
@@ -118,7 +142,7 @@ export default function HospitalSalesModal({
         visit5Content: '',
         visit6: '',
         visit6Content: '',
-        lastUpdate: '',
+        lastUpdate: new Date().toISOString().split('T')[0],
       })
     }
   }, [hospitalSales, mode, open])
@@ -206,22 +230,137 @@ export default function HospitalSalesModal({
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="영업담당자"
-                value={formData.salesPerson}
-                onChange={handleChange('salesPerson')}
-                required
+                label="위도"
+                type="number"
+                value={formData.lat}
+                onChange={handleChange('lat')}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="방문횟수"
+                label="경도"
                 type="number"
-                value={formData.visitCount}
-                onChange={handleChange('visitCount')}
-                required
+                value={formData.lng}
+                onChange={handleChange('lng')}
               />
             </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="팩스"
+                value={formData.fax}
+                onChange={handleChange('fax')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="원장이름"
+                value={formData.directorName}
+                onChange={handleChange('directorName')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="담당자명"
+                value={formData.contactPerson}
+                onChange={handleChange('contactPerson')}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="담당자 연락처"
+                value={formData.contactPhone}
+                onChange={handleChange('contactPhone')}
+              />
+            </Grid>
+
+            {/* 영업 현황 */}
+            <Grid item xs={12}>
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" sx={{ mb: 2 }}>영업 현황</Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>세일즈 단계</InputLabel>
+                <Select
+                  value={formData.salesStage}
+                  label="세일즈 단계"
+                  onChange={handleChange('salesStage')}
+                >
+                  <MenuItem value="S">S (최우선)</MenuItem>
+                  <MenuItem value="A">A (우선)</MenuItem>
+                  <MenuItem value="B">B (일반)</MenuItem>
+                  <MenuItem value="C">C (보류)</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                             <FormControl fullWidth>
+                 <InputLabel>성향</InputLabel>
+                 <Select
+                   value={formData.tendency}
+                   label="성향"
+                   onChange={handleChange('tendency')}
+                 >
+                   <MenuItem value="긍정적">긍정적</MenuItem>
+                   <MenuItem value="보수적">보수적</MenuItem>
+                   <MenuItem value="중립적">중립적</MenuItem>
+                   <MenuItem value="부정적">부정적</MenuItem>
+                   <MenuItem value="미정">미정</MenuItem>
+                 </Select>
+               </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Next Step"
+                value={formData.nextStep}
+                onChange={handleChange('nextStep')}
+                multiline
+                rows={2}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="과제(니즈)"
+                value={formData.needs}
+                onChange={handleChange('needs')}
+                multiline
+                rows={2}
+              />
+            </Grid>
+                         <Grid item xs={12} sm={6}>
+               <TextField
+                 fullWidth
+                 label="진행상황"
+                 value={formData.progress}
+                 onChange={handleChange('progress')}
+               />
+             </Grid>
+             <Grid item xs={12} sm={6}>
+               <TextField
+                 fullWidth
+                 label="영업담당자"
+                 value={formData.salesPerson}
+                 onChange={handleChange('salesPerson')}
+                 required
+               />
+             </Grid>
+             <Grid item xs={12} sm={6}>
+               <TextField
+                 fullWidth
+                 label="방문횟수"
+                 type="number"
+                 value={formData.visitCount}
+                 onChange={handleChange('visitCount')}
+                 required
+               />
+             </Grid>
 
             {/* 방문 일자 */}
             <Grid item xs={12}>
@@ -246,45 +385,6 @@ export default function HospitalSalesModal({
                 value={formData.lastVisitDate}
                 onChange={handleChange('lastVisitDate')}
                 InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-
-            {/* 영업 현황 */}
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" sx={{ mb: 2 }}>영업 현황</Typography>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="반응"
-                value={formData.response}
-                onChange={handleChange('response')}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>세일즈 단계</InputLabel>
-                <Select
-                  value={formData.salesStage}
-                  label="세일즈 단계"
-                  onChange={handleChange('salesStage')}
-                >
-                  <MenuItem value="S">S (최우선)</MenuItem>
-                  <MenuItem value="A">A (우선)</MenuItem>
-                  <MenuItem value="B">B (일반)</MenuItem>
-                  <MenuItem value="C">C (보류)</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Next Step"
-                value={formData.nextStep}
-                onChange={handleChange('nextStep')}
-                multiline
-                rows={2}
               />
             </Grid>
 

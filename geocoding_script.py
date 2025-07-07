@@ -8,11 +8,56 @@
 import requests
 import time
 import json
+import re
 from typing import Optional, Tuple
 import pandas as pd
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import os
+
+def normalize_address(address: str) -> str:
+    """
+    주소를 정규화하여 상세 정보를 제거합니다.
+    
+    Args:
+        address (str): 원본 주소
+        
+    Returns:
+        str: 정규화된 주소
+    """
+    if not address:
+        return address
+    
+    # 쉼표 이후의 상세 정보 제거
+    # 예: '강원특별자치도 강릉시 경강로 2079, 2~5층(임당동, 유암빌딩)' -> '강원특별자치도 강릉시 경강로 2079'
+    normalized = re.split(r'[,，]', address)[0].strip()
+    
+    # 괄호 안의 상세 정보 제거
+    # 예: '강원특별자치도 강릉시 경강로 2079 (임당동, 유암빌딩)' -> '강원특별자치도 강릉시 경강로 2079'
+    normalized = re.sub(r'\s*\([^)]*\)', '', normalized)
+    
+    # 층수 정보 제거 (숫자층, ~층, 층 등)
+    normalized = re.sub(r'\s*\d+~?\d*층', '', normalized)
+    normalized = re.sub(r'\s*[0-9]+[Ff]', '', normalized)
+    
+    # 건물명 제거 (일반적인 패턴)
+    building_patterns = [
+        r'\s*[A-Za-z0-9가-힣]+빌딩',
+        r'\s*[A-Za-z0-9가-힣]+타워',
+        r'\s*[A-Za-z0-9가-힣]+센터',
+        r'\s*[A-Za-z0-9가-힣]+플라자',
+        r'\s*[A-Za-z0-9가-힣]+아파트',
+        r'\s*[A-Za-z0-9가-힣]+상가',
+        r'\s*[A-Za-z0-9가-힣]+오피스',
+    ]
+    
+    for pattern in building_patterns:
+        normalized = re.sub(pattern, '', normalized)
+    
+    # 연속된 공백 제거
+    normalized = re.sub(r'\s+', ' ', normalized).strip()
+    
+    return normalized
 
 class KakaoGeocoder:
     def __init__(self, api_key: str):
@@ -196,6 +241,103 @@ class GoogleSheetsUpdater:
                 print(f"청크 업데이트 실패: {str(e)}")
                 continue
 
+def process_failed_coordinates(spreadsheet_id: str, sheet_name: str, geocoder: KakaoGeocoder, sheets_updater: GoogleSheetsUpdater, chunk_size=50):
+    """
+    E열이 '변환실패'인 행들의 주소를 다시 지오코딩하여 좌표를 추가합니다.
+    
+    Args:
+        spreadsheet_id (str): 스프레드시트 ID
+        sheet_name (str): 시트 이름
+        geocoder (KakaoGeocoder): 지오코더 인스턴스
+        sheets_updater (GoogleSheetsUpdater): 시트 업데이터 인스턴스
+        chunk_size (int): 한 번에 처리할 행 수
+    """
+    print("\n=== E열 '변환실패' 주소 재지오코딩 시작 ===")
+    
+    # 전체 데이터 가져오기 (A~F열)
+    data_range = f"{sheet_name}!A:F"
+    all_data = sheets_updater.get_sheet_data(spreadsheet_id, data_range)
+    
+    if not all_data:
+        print("데이터가 없습니다.")
+        return
+    
+    # E열이 '변환실패'인 행들 찾기 (헤더 제외)
+    failed_rows = []
+    for i, row in enumerate(all_data, 1):
+        if i == 1:  # 헤더 행은 건너뛰기
+            continue
+        if len(row) >= 5 and row[4] == "변환실패":  # E열이 '변환실패'인 경우
+            failed_rows.append((i, row))
+    
+    if not failed_rows:
+        print("E열이 '변환실패'인 주소가 없습니다.")
+        return
+    
+    print(f"E열이 '변환실패'인 주소 {len(failed_rows)}개를 찾았습니다.")
+    
+    # 50행씩 청크로 나누어 처리
+    total_failed = len(failed_rows)
+    
+    for chunk_start in range(0, total_failed, chunk_size):
+        chunk_end = min(chunk_start + chunk_size, total_failed)
+        chunk_failed_rows = failed_rows[chunk_start:chunk_end]
+        
+        print(f"\n=== 청크 {chunk_start//chunk_size + 1} 처리 중 (행 {chunk_start + 1}-{chunk_end}) ===")
+        
+        # 현재 청크의 좌표 데이터 수집
+        chunk_coordinates_data = []
+        chunk_row_numbers = []
+        
+        for row_num, row in chunk_failed_rows:
+            if len(row) < 4:
+                continue
+                
+            original_address = row[3]  # D열의 원본 주소
+            
+            if not original_address or original_address.strip() == "":
+                continue
+            
+            print(f"행 {row_num}: '{original_address}'")
+            
+            # 원본 주소로 바로 지오코딩 시도
+            coordinates = geocoder.geocode_address(original_address)
+            
+            if coordinates:
+                latitude, longitude = coordinates
+                chunk_coordinates_data.append([latitude, longitude])
+                chunk_row_numbers.append(row_num)
+                print(f"  → 성공: 위도 {latitude}, 경도 {longitude}")
+            else:
+                # 여전히 실패 시 '변환실패' 유지
+                chunk_coordinates_data.append(["변환실패", ""])
+                chunk_row_numbers.append(row_num)
+                print(f"  → 여전히 실패")
+            
+            # API 호출 제한을 위한 대기
+            time.sleep(0.1)
+        
+        # 현재 청크의 좌표들을 개별 행으로 업데이트
+        if chunk_coordinates_data:
+            print(f"청크 {chunk_start//chunk_size + 1}에서 {len(chunk_coordinates_data)}개 주소를 개별 업데이트합니다...")
+            
+            for row_num, coordinates in zip(chunk_row_numbers, chunk_coordinates_data):
+                # 개별 행으로 업데이트
+                row_range = f"{sheet_name}!E{row_num}:F{row_num}"
+                sheets_updater.update_sheet_data(spreadsheet_id, row_range, [coordinates])
+                time.sleep(0.2)  # 각 행 업데이트 간 대기
+            
+            print(f"청크 {chunk_start//chunk_size + 1} 업데이트 완료!")
+        else:
+            print(f"청크 {chunk_start//chunk_size + 1}에서 처리할 주소가 없습니다.")
+        
+        # 다음 청크 처리 전 대기
+        if chunk_end < total_failed:
+            print("다음 청크 처리 전 3초 대기...")
+            time.sleep(3)
+    
+    print("E열 '변환실패' 주소 재지오코딩 완료!")
+
 def main():
     # 설정값 - 실제 값으로 수정하세요!
     KAKAO_API_KEY = "498e5bb317e1d1d671940222856329b0"  # 카카오 REST API 키를 입력하세요
@@ -228,75 +370,8 @@ def main():
     sheets_updater = GoogleSheetsUpdater(GOOGLE_CREDENTIALS_FILE)
     sheets_updater.authenticate()
     
-    # 기존 데이터 가져오기 (A~D열)
-    data_range = f"{SHEET_NAME}!A:D"
-    existing_data = sheets_updater.get_sheet_data(SPREADSHEET_ID, data_range)
-    
-    if not existing_data:
-        print("데이터가 없습니다.")
-        return
-    
-    print(f"총 {len(existing_data)}행의 데이터를 처리합니다.")
-    
-    # 50행씩 청크로 나누어 처리
-    chunk_size = 50
-    total_rows = len(existing_data)
-    
-    for chunk_start in range(START_ROW - 1, total_rows, chunk_size):
-        chunk_end = min(chunk_start + chunk_size, total_rows)
-        chunk_data = existing_data[chunk_start:chunk_end]
-        
-        print(f"\n=== 청크 {chunk_start//chunk_size + 1} 처리 중 (행 {chunk_start + 1}-{chunk_end}) ===")
-        
-        # 현재 청크의 위도, 경도 데이터 수집
-        coordinates_data = []
-        
-        for i, row in enumerate(chunk_data, chunk_start + 1):
-            if i < START_ROW:
-                # 헤더 행은 건너뛰기
-                coordinates_data.append(["", ""])
-                continue
-                
-            if len(row) < 4:
-                # D열(주소)이 없는 경우
-                coordinates_data.append(["", ""])
-                continue
-                
-            address = row[3]  # D열의 주소
-            
-            if not address or address.strip() == "":
-                coordinates_data.append(["", ""])
-                continue
-                
-            print(f"처리 중: {i}행 - {address}")
-            
-            # 주소를 좌표로 변환
-            coordinates = geocoder.geocode_address(address.strip())
-            
-            if coordinates:
-                latitude, longitude = coordinates
-                coordinates_data.append([latitude, longitude])
-                print(f"  → 위도: {latitude}, 경도: {longitude}")
-            else:
-                # 변환 실패 시 E열에 '변환실패' 입력
-                coordinates_data.append(["변환실패", ""])
-                print(f"  → 변환 실패")
-            
-            # API 호출 제한을 위한 대기
-            time.sleep(0.1)
-        
-        # 현재 청크 데이터를 시트에 업데이트
-        print(f"청크 {chunk_start//chunk_size + 1} 변환 완료. 구글 시트에 업데이트 중...")
-        chunk_start_row = chunk_start + 1
-        chunk_range = f"{SHEET_NAME}!E{chunk_start_row}:F{chunk_end}"
-        sheets_updater.update_sheet_data(SPREADSHEET_ID, chunk_range, coordinates_data)
-        
-        print(f"청크 {chunk_start//chunk_size + 1} 업데이트 완료!")
-        
-        # 다음 청크 처리 전 대기
-        if chunk_end < total_rows:
-            print("다음 청크 처리 전 3초 대기...")
-            time.sleep(3)
+    # E열이 '변환실패'인 주소들 재지오코딩
+    process_failed_coordinates(SPREADSHEET_ID, SHEET_NAME, geocoder, sheets_updater)
     
     print("모든 작업이 완료되었습니다!")
 
