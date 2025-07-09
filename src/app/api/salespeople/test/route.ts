@@ -8,9 +8,24 @@ const SPREADSHEET_ID = '12pcRCN5bqqupjtVi06O3iW6VG8Q1Xr9qWV51ORUMyIA'
 
 // Google Sheets API 클라이언트 생성
 function getGoogleSheetsClient() {
+  const path = require('path')
+  const fs = require('fs')
+  const keyFilePath = path.join(process.cwd(), 'google-service-account-key.json')
+  
+  // 환경 변수에서 키 파일 경로 확인
+  const envKeyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS
+  const finalKeyFile = envKeyFile || keyFilePath
+  
+  console.log('테스트용 키 파일 경로:', finalKeyFile)
+  
+  // 키 파일 존재 여부 확인
+  if (!fs.existsSync(finalKeyFile)) {
+    throw new Error(`Google Sheets API 키 파일을 찾을 수 없습니다: ${finalKeyFile}`)
+  }
+  
   const auth = new google.auth.GoogleAuth({
     scopes: SCOPES,
-    keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    keyFile: finalKeyFile,
   })
 
   return google.sheets({ version: 'v4', auth })

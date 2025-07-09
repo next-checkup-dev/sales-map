@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -55,6 +55,7 @@ import NaverMap from '@/components/NaverMap'
 import type { HospitalSalesData } from '@/lib/googleSheets'
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
   const [currentTab, setCurrentTab] = useState(0)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [hospitalSalesModalOpen, setHospitalSalesModalOpen] = useState(false)
@@ -108,6 +109,12 @@ export default function Home() {
     setHospitalSalesModalOpen(true)
   }, [])
 
+  // 마운트 체크
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) return null;
+
   const handleLogout = async () => {
     await logout()
   }
@@ -135,12 +142,14 @@ export default function Home() {
     }
   }
 
-  const handleSaveHospitalSales = async (data: Omit<HospitalSalesData, 'id'>) => {
+  const handleSaveHospitalSales = async (data: HospitalSalesData | Omit<HospitalSalesData, 'id'>) => {
     if (modalMode === 'add') {
-      return await addHospitalSales(data)
+      return await addHospitalSales(data as Omit<HospitalSalesData, 'id'>)
     } else {
       if (editingHospitalSales) {
-        return await updateHospitalSales({ ...editingHospitalSales, ...data })
+        // 수정 모드에서는 data가 HospitalSalesData 타입이어야 함
+        const updateData = data as HospitalSalesData
+        return await updateHospitalSales(updateData)
       }
       return { success: false, error: '편집할 병원 영업 데이터가 없습니다.' }
     }
@@ -309,7 +318,7 @@ export default function Home() {
       {/* 병원 리스트 (가상화 적용) */}
       <VirtualizedList
         data={filteredHospitalSales}
-        containerHeight={600} // 고정 높이 사용
+        containerHeight={500} // 적절한 높이로 조정
         onEdit={handleEditHospitalSales}
         onDelete={handleDeleteHospitalSales}
         loading={sheetsLoading}

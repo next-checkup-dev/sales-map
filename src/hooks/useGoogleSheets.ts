@@ -59,7 +59,14 @@ export function useGoogleSheets() {
       const result = await response.json()
       
       if (result.success) {
-        await fetchData() // 데이터 새로고침
+        // 즉시 로컬 상태에 추가
+        setHospitalSales(prevData => [...prevData, newData])
+        
+        // 백그라운드에서 전체 데이터 새로고침
+        setTimeout(() => {
+          fetchData()
+        }, 1000)
+        
         return { success: true, message: result.message }
       } else {
         return { success: false, error: result.error }
@@ -89,7 +96,18 @@ export function useGoogleSheets() {
       const result = await response.json()
       
       if (result.success) {
-        await fetchData() // 데이터 새로고침
+        // 즉시 로컬 상태 업데이트
+        setHospitalSales(prevData => 
+          prevData.map(item => 
+            item.id === data.id ? { ...item, ...updatedData } : item
+          )
+        )
+        
+        // 백그라운드에서 전체 데이터 새로고침
+        setTimeout(() => {
+          fetchData()
+        }, 1000)
+        
         return { success: true, message: result.message }
       } else {
         return { success: false, error: result.error }
@@ -110,7 +128,14 @@ export function useGoogleSheets() {
       const result = await response.json()
       
       if (result.success) {
-        await fetchData() // 데이터 새로고침
+        // 즉시 로컬 상태에서 제거
+        setHospitalSales(prevData => prevData.filter(item => item.id !== id))
+        
+        // 백그라운드에서 전체 데이터 새로고침
+        setTimeout(() => {
+          fetchData()
+        }, 1000)
+        
         return { success: true, message: result.message }
       } else {
         return { success: false, error: result.error }
